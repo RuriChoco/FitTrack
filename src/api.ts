@@ -1,6 +1,7 @@
 export interface UserProfile {
   id: string;
   username: string;
+  email?: string;
   age: number;
   gender: string;
   avatar?: string;
@@ -8,6 +9,7 @@ export interface UserProfile {
   is_admin?: boolean;
   weight?: number;
   target_weight?: number;
+  weight_unit?: string;
   goal_type?: string;
 }
 
@@ -49,30 +51,43 @@ export interface Achievement {
 }
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, deleteUser as deleteAuthUser, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, getCountFromServer, enableIndexedDbPersistence, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { getAnalytics } from 'firebase/analytics';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, deleteUser as deleteAuthUser, GoogleAuthProvider, signInWithPopup, connectAuthEmulator, sendEmailVerification, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, getCountFromServer, enableIndexedDbPersistence, writeBatch, serverTimestamp, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, connectStorageEmulator, deleteObject } from 'firebase/storage';
+import { evaluateAchievements } from './data/achievements';
 
-// TODO: Replace with your actual Firebase Project config!
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn('Firebase offline caching failed: Multiple tabs open.');
-  } else if (err.code === 'unimplemented') {
-    console.warn('Firebase offline caching not supported by this browser.');
-  }
-});
+if (import.meta.env.DEV) {
+  // Connect to local emulators during development
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  connectStorageEmulator(storage, '127.0.0.1', 9199);
+  console.log('Connected to Firebase Local Emulators');
+} else {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Firebase offline caching failed: Multiple tabs open.');
+    } else if (err.code === 'unimplemented') {
+      console.warn('Firebase offline caching not supported by this browser.');
+    }
+  });
+}
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -125,13 +140,35 @@ export const api = {
     });
   },
 
+  uploadAvatar: async (file: File, userId: string, oldAvatarUrl?: string) => {
+    try {
+      if (oldAvatarUrl && oldAvatarUrl.includes('firebasestorage')) {
+        try {
+          const oldRef = ref(storage, oldAvatarUrl);
+          await deleteObject(oldRef);
+        } catch (delErr) {
+          console.warn('Failed to delete old avatar:', delErr);
+        }
+      }
+
+      const fileExtension = file.name.split('.').pop();
+      const storageRef = ref(storage, `avatars/${userId}_${Date.now()}.${fileExtension}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      return mockResponse({ url });
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Failed to upload image' }, false, 500);
+    }
+  },
+
   signup: async (data: any) => {
     try {
-      const email = `${data.username}@fittrack.local`;
-      const cred = await createUserWithEmailAndPassword(auth, email, data.password);
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await sendEmailVerification(cred.user);
       const userDoc = {
         id: cred.user.uid,
         username: data.username,
+        email: data.email,
         age: data.age,
         gender: data.gender,
         avatar: data.avatar || null,
@@ -139,23 +176,55 @@ export const api = {
         is_admin: false,
         weight: data.weight || null,
         target_weight: data.target_weight || null,
+        weight_unit: data.weight_unit || 'lbs',
         goal_type: data.goal_type || 'maintain'
       };
       await setDoc(doc(db, 'users', cred.user.uid), userDoc);
-      return mockResponse({ user: userDoc, token: 'firebase-token' });
-    } catch (e) {
-      return mockResponse({ error: 'Signup failed' }, false, 400);
+      // Sign them out immediately so they are forced to verify and log in
+      await signOut(auth);
+      return mockResponse({ success: true });
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Signup failed' }, false, 400);
     }
   },
     
   login: async (data: any) => {
     try {
-      const email = `${data.username}@fittrack.local`;
-      const cred = await signInWithEmailAndPassword(auth, email, data.password);
+      const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
+      
+      if (!cred.user.emailVerified) {
+        await signOut(auth);
+        return mockResponse({ error: 'Please verify your email address before logging in.', needsVerification: true }, false, 403);
+      }
+      
       const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
       return mockResponse({ user: userDoc.data(), token: 'firebase-token' });
-    } catch (e) {
-      return mockResponse({ error: 'Login failed' }, false, 401);
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Login failed' }, false, 401);
+    }
+  },
+    
+  resendVerification: async (data: any) => {
+    try {
+      const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
+      if (!cred.user.emailVerified) {
+        await sendEmailVerification(cred.user);
+        await signOut(auth);
+        return mockResponse({ success: true });
+      }
+      await signOut(auth);
+      return mockResponse({ error: 'Email is already verified. You can log in.' }, false, 400);
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Failed to resend verification email.' }, false, 400);
+    }
+  },
+
+  resetPassword: async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return mockResponse({ success: true });
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Failed to send reset email.' }, false, 400);
     }
   },
     
@@ -172,6 +241,7 @@ export const api = {
         userDoc = {
           id: cred.user.uid,
           username: cred.user.displayName || cred.user.email?.split('@')[0] || 'User',
+          email: cred.user.email || '',
           age: 30, // Default age
           gender: 'other',
           avatar: cred.user.photoURL || null,
@@ -179,27 +249,39 @@ export const api = {
           is_admin: false,
           weight: null,
           target_weight: null,
+          weight_unit: 'lbs',
           goal_type: 'maintain'
         };
         await setDoc(userRef, userDoc);
       }
       return mockResponse({ user: userDoc, token: 'firebase-token' });
-    } catch (e) {
-      return mockResponse({ error: 'Google Sign-In failed' }, false, 401);
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Google Sign-In failed' }, false, 401);
     }
   },
     
   updateProfile: async (data: any) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
-      if (data.password) await updatePassword(auth.currentUser, data.password);
+      if (data.password) {
+        if (data.oldPassword) {
+          try {
+            const cred = EmailAuthProvider.credential(auth.currentUser.email || '', data.oldPassword);
+            await reauthenticateWithCredential(auth.currentUser, cred);
+          } catch (err: any) {
+            return mockResponse({ error: 'Incorrect current password.' }, false, 403);
+          }
+        }
+        await updatePassword(auth.currentUser, data.password);
+      }
       const updateData = { ...data };
       delete updateData.password;
+      delete updateData.oldPassword;
       await updateDoc(doc(db, 'users', auth.currentUser.uid), updateData);
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
       return mockResponse(userDoc.data());
-    } catch (e) {
-      return mockResponse({ error: 'Update failed' }, false, 500);
+    } catch (e: any) {
+      return mockResponse({ error: e.message || 'Update failed' }, false, 500);
     }
   },
     
@@ -318,14 +400,8 @@ export const api = {
       if (!auth.currentUser) throw new Error('Not auth');
       const uid = auth.currentUser.uid;
 
-      const count = logs.length;
-      const dur = logs.reduce((sum, doc) => sum + doc.duration, 0);
-      const ach: Achievement[] = [];
-      
-      if (count >= 1) ach.push({ id: 'first_step', name: 'First Step', description: 'Logged your first activity', icon: 'Star' });
-      if (count >= 5) ach.push({ id: 'getting_serious', name: 'Getting Serious', description: 'Logged 5 total activities', icon: 'Medal' });
-      if (dur >= 100) ach.push({ id: 'century_club', name: 'Century Club', description: 'Reached 100 active minutes', icon: 'Award' });
-      if (dur >= 500) ach.push({ id: 'marathoner', name: 'Marathoner', description: 'Reached 500 active minutes', icon: 'Trophy' });
+      const ach = evaluateAchievements(logs);
+
       
       // Check against Firestore to see which badges are already saved
       const earnedSnap = await getDocs(collection(db, `users/${uid}/earned_badges`));
