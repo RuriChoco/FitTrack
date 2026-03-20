@@ -67,6 +67,11 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+if (!firebaseConfig.projectId && !import.meta.env.DEV) {
+  console.error('FIREBASE FATAL ERROR: VITE_FIREBASE_PROJECT_ID is missing. ' +
+    'Check your GitHub Secrets or environment variables.');
+}
+
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
