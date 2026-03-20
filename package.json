@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "emulators": "firebase emulators:start",
+    "emulators": "firebase emulators:start --import=./emulator_data --export-on-exit=./emulator_data",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",

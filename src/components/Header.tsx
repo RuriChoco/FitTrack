@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, User, Flame, Sun, Moon, Users, Settings, LogOut } from 'lucide-react';
+import { Activity, User, Flame, Sun, Moon, Users, Settings, LogOut, Dumbbell } from 'lucide-react';
 import { type UserProfile } from '../api';
 
 interface HeaderProps {
@@ -42,6 +42,13 @@ export function Header({ user, streak, isDark, toggleTheme, setView, handleLogou
           title="Toggle Theme"
         >
           {isDark ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+        <button
+          onClick={() => setView('suggest')}
+          className="p-2 text-zinc-400 hover:text-emerald-500 transition-colors hidden sm:block"
+          title="Activity Suggestions"
+        >
+          <Dumbbell size={20} />
         </button>
         {user.is_admin && (
           <button 

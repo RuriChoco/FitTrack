@@ -35,12 +35,27 @@ export function AppModals({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <Card className="w-full max-w-sm">
             <h3 className="text-xl font-bold mb-2">Log Activity</h3>
-            <p className="text-zinc-500 dark:text-zinc-400 mb-6">How long did you do <strong>{logModal.exercise}</strong>?</p>
+            <p className="text-zinc-500 dark:text-zinc-400 mb-6">
+              {logModal.exercise ? <>How long did you do <strong>{logModal.exercise}</strong>?</> : 'What did you do today?'}
+            </p>
             <div className="space-y-4">
+              {!logModal.exercise && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Exercise / Activity</label>
+                  <input
+                    autoFocus
+                    type="text"
+                    id="modal-exercise"
+                    list="exercise-suggestions"
+                    placeholder="e.g. Running, Yoga, Swimming..."
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Duration (minutes)</label>
                 <input 
-                  autoFocus
+                  autoFocus={!!logModal.exercise}
                   type="number" 
                   defaultValue="30"
                   id="modal-duration"
@@ -52,7 +67,10 @@ export function AppModals({
                   className="flex-1"
                   onClick={() => {
                     const duration = parseInt((document.getElementById('modal-duration') as HTMLInputElement).value);
-                    handleLogActivity(logModal.exercise, duration);
+                    const exerciseInput = document.getElementById('modal-exercise') as HTMLInputElement | null;
+                    const exercise = logModal.exercise || exerciseInput?.value?.trim() || '';
+                    if (!exercise) { exerciseInput?.focus(); return; }
+                    handleLogActivity(exercise, duration);
                   }}
                 >
                   Log Now
@@ -63,6 +81,7 @@ export function AppModals({
           </Card>
         </div>
       )}
+
 
       {logWeightModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">

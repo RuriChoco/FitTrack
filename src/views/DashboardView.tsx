@@ -34,6 +34,11 @@ export const DashboardView = ({
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const renderAchievementIcon = (iconName: string) => {
     switch (iconName) {
@@ -107,34 +112,36 @@ export const DashboardView = ({
             </select>
           </div>
           <div className="h-64 w-full min-h-[16rem]">
-            <ResponsiveContainer width="99%" height="100%" minWidth={0}>
-              <BarChart data={stats}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                <Tooltip 
-                  isAnimationActive={true}
-                  animationDuration={150}
-                  animationEasing="ease-out"
-                  cursor={{fill: isDark ? '#27272a' : '#f8fafc'}}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-700">
-                          <p className="text-sm font-bold mb-1 text-zinc-900 dark:text-zinc-100">{label}</p>
-                          <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm flex items-center gap-1">
-                            <Clock size={14} />
-                            {payload[0].value} Active Minutes
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="total_duration" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} animationDuration={400} animationBegin={0} animationEasing="ease-in-out" />
-              </BarChart>
-            </ResponsiveContainer>
+            {isMounted && (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <BarChart data={stats}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                  <Tooltip 
+                    isAnimationActive={true}
+                    animationDuration={150}
+                    animationEasing="ease-out"
+                    cursor={{fill: isDark ? '#27272a' : '#f8fafc'}}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-700">
+                            <p className="text-sm font-bold mb-1 text-zinc-900 dark:text-zinc-100">{label}</p>
+                            <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm flex items-center gap-1">
+                              <Clock size={14} />
+                              {payload[0].value} Active Minutes
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="total_duration" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} animationDuration={400} animationBegin={0} animationEasing="ease-in-out" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
@@ -142,43 +149,45 @@ export const DashboardView = ({
           <h3 className="font-bold flex items-center gap-2 mb-6"><Target className="text-blue-500" /> Weight Progress</h3>
           <div className="h-64 w-full min-h-[16rem]">
             {weightLogs.length > 0 ? (
-              <ResponsiveContainer width="99%" height="100%" minWidth={0}>
-                <LineChart data={weightLogs}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                  <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} width={40} />
-                  <Tooltip 
-                    isAnimationActive={true}
-                    animationDuration={150}
-                    animationEasing="ease-out"
-                    cursor={{stroke: isDark ? '#27272a' : '#f8fafc', strokeWidth: 2}}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const currentWeight = payload[0].value as number;
-                        const target = user?.target_weight;
-                        const diff = target ? (currentWeight - target).toFixed(1) : null;
-                        return (
-                          <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-700">
-                            <p className="text-sm font-bold mb-1 text-zinc-900 dark:text-zinc-100">{label}</p>
-                            <p className="text-blue-600 dark:text-blue-400 font-medium text-sm flex items-center gap-1">
-                              <Activity size={14} />
-                              {currentWeight} {user?.weight_unit || 'lbs'}
-                            </p>
-                            {target && (
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                {Number(diff) > 0 ? `${diff} ${user?.weight_unit || 'lbs'} to lose` : Number(diff) < 0 ? `${Math.abs(Number(diff))} ${user?.weight_unit || 'lbs'} to gain` : 'Target reached! 🎉'}
+              isMounted && (
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <LineChart data={weightLogs}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                    <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} width={40} />
+                    <Tooltip 
+                      isAnimationActive={true}
+                      animationDuration={150}
+                      animationEasing="ease-out"
+                      cursor={{stroke: isDark ? '#27272a' : '#f8fafc', strokeWidth: 2}}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const currentWeight = payload[0].value as number;
+                          const target = user?.target_weight;
+                          const diff = target ? (currentWeight - target).toFixed(1) : null;
+                          return (
+                            <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-700">
+                              <p className="text-sm font-bold mb-1 text-zinc-900 dark:text-zinc-100">{label}</p>
+                              <p className="text-blue-600 dark:text-blue-400 font-medium text-sm flex items-center gap-1">
+                                <Activity size={14} />
+                                {currentWeight} {user?.weight_unit || 'lbs'}
                               </p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  {user?.target_weight && <ReferenceLine y={user.target_weight} stroke="#10b981" strokeDasharray="5 5" label={{ value: 'Target', position: 'top', fill: '#10b981', fontSize: 12, fontWeight: 500 }} />}
-                  <Line type="monotone" dataKey="weight" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6'}} activeDot={{r: 6}} animationDuration={400} animationBegin={0} animationEasing="ease-in-out" />
-                </LineChart>
-              </ResponsiveContainer>
+                              {target && (
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                  {Number(diff) > 0 ? `${diff} ${user?.weight_unit || 'lbs'} to lose` : Number(diff) < 0 ? `${Math.abs(Number(diff))} ${user?.weight_unit || 'lbs'} to gain` : 'Target reached! 🎉'}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    {user?.target_weight && <ReferenceLine y={user.target_weight} stroke="#10b981" strokeDasharray="5 5" label={{ value: 'Target', position: 'top', fill: '#10b981', fontSize: 12, fontWeight: 500 }} />}
+                    <Line type="monotone" dataKey="weight" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6'}} activeDot={{r: 6}} animationDuration={400} animationBegin={0} animationEasing="ease-in-out" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-zinc-400">
                 <Activity size={48} className="mb-4 opacity-20" />

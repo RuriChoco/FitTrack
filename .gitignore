@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+emulator_data/
+firebase_exports/
+firebase-export*

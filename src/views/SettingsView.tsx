@@ -26,6 +26,10 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
   const [settingsNewPassword, setSettingsNewPassword] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
 
+  const customAvatarSource = !PREDEFINED_AVATARS.includes(editAvatar) 
+    ? editAvatar 
+    : (user.avatar && !PREDEFINED_AVATARS.includes(user.avatar) ? user.avatar : null);
+
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
     const crop = centerCrop(
@@ -270,16 +274,16 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">Choose an Avatar</label>
               <div className="flex flex-wrap gap-3">
-                {user.avatar && !PREDEFINED_AVATARS.includes(user.avatar) && (
+                {customAvatarSource && (
                   <button
                     type="button"
-                    onClick={() => setEditAvatar(user.avatar!)}
+                    onClick={() => setEditAvatar(customAvatarSource)}
                     className={cn(
                       "w-12 h-12 rounded-full overflow-hidden border-2 transition-all",
-                      editAvatar === user.avatar ? "border-emerald-500 shadow-md scale-110" : "border-transparent opacity-50 hover:opacity-100 hover:scale-105"
+                      editAvatar === customAvatarSource ? "border-emerald-500 shadow-md scale-110" : "border-transparent opacity-50 hover:opacity-100 hover:scale-105"
                     )}
                   >
-                    <img src={user.avatar} alt="Current custom avatar" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
+                    <img src={customAvatarSource} alt="Custom avatar" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
                   </button>
                 )}
                 {PREDEFINED_AVATARS.map(url => (

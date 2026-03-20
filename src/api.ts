@@ -98,17 +98,79 @@ const mockResponse = (data?: any, ok = true, status = 200) => ({
 });
 
 const SEED_EXERCISES: Exercise[] = [
-  { id: '1', name: 'Brisk Walking', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '2', name: 'Gentle Yoga', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '4', name: 'Chair Aerobics', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '5', name: 'Resistance Band Training', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '6', name: 'Tai Chi', category: 'Balance', difficulty: 'Beginner' },
-  { id: '7', name: 'Bodyweight Squats', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '8', name: 'Stretching Routine', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '9', name: 'Dancing', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '10', name: 'Pilates', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '11', name: 'Heavy Lifting', category: 'Strength', difficulty: 'Advanced' },
+  // Beginner - Cardio
+  { id: '1',  name: 'Brisk Walking',           category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '4',  name: 'Chair Aerobics',           category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '12', name: 'Slow Jogging',             category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '13', name: 'Jump Rope',                category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '14', name: 'Cycling (Leisure)',        category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '15', name: 'Water Aerobics',           category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '38', name: 'Toe Taps',                 category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '39', name: 'Aquatic Walking',          category: 'Cardio',       difficulty: 'Beginner' },
+  { id: '40', name: 'Hula Hooping',             category: 'Cardio',       difficulty: 'Beginner' },
+  // Beginner - Flexibility and Balance
+  { id: '2',  name: 'Gentle Yoga',              category: 'Flexibility',  difficulty: 'Beginner' },
+  { id: '6',  name: 'Tai Chi',                  category: 'Balance',      difficulty: 'Beginner' },
+  { id: '8',  name: 'Stretching Routine',       category: 'Flexibility',  difficulty: 'Beginner' },
+  { id: '16', name: 'Foam Rolling',             category: 'Flexibility',  difficulty: 'Beginner' },
+  { id: '17', name: 'Balance Board',            category: 'Balance',      difficulty: 'Beginner' },
+  { id: '41', name: 'Light Stretching',         category: 'Flexibility',  difficulty: 'Beginner' },
+  { id: '42', name: 'Arm Circles',              category: 'Flexibility',  difficulty: 'Beginner' },
+  { id: '43', name: 'Standing Desk Exercises',  category: 'Flexibility',  difficulty: 'Beginner' },
+  // Beginner - Strength
+  { id: '18', name: 'Wall Push-Ups',            category: 'Strength',     difficulty: 'Beginner' },
+  { id: '19', name: 'Seated Leg Raises',        category: 'Strength',     difficulty: 'Beginner' },
+  { id: '20', name: 'Glute Bridges',            category: 'Strength',     difficulty: 'Beginner' },
+  { id: '44', name: 'Wall Sits',                category: 'Strength',     difficulty: 'Beginner' },
+  { id: '45', name: 'Heel Raises',              category: 'Strength',     difficulty: 'Beginner' },
+  // Intermediate - Cardio
+  { id: '3',  name: 'Swimming',                 category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '9',  name: 'Dancing',                  category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '21', name: 'Rowing Machine',           category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '22', name: 'Stair Climbing',           category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '23', name: 'Cycling (Moderate)',       category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '24', name: 'Running',                  category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '46', name: 'Zumba',                    category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '47', name: 'Elliptical Machine',       category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '48', name: 'Shadow Boxing',            category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '49', name: 'Kickboxing Basics',        category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '50', name: 'Step Aerobics',            category: 'Cardio',       difficulty: 'Intermediate' },
+  { id: '56', name: 'Piloxing',                 category: 'Cardio',       difficulty: 'Intermediate' },
+  // Intermediate - Strength
+  { id: '5',  name: 'Resistance Band Training', category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '7',  name: 'Bodyweight Squats',        category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '10', name: 'Pilates',                  category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '25', name: 'Dumbbell Rows',            category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '26', name: 'Lunges',                   category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '27', name: 'Push-Ups',                 category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '28', name: 'Plank Hold',               category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '51', name: 'Kettlebell Swings',        category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '52', name: 'TRX Basics',               category: 'Strength',     difficulty: 'Intermediate' },
+  { id: '53', name: 'Core Crunch Circuit',      category: 'Strength',     difficulty: 'Intermediate' },
+  // Intermediate - HIIT and Sports
+  { id: '29', name: 'HIIT Circuit',             category: 'HIIT',         difficulty: 'Intermediate' },
+  { id: '30', name: 'Basketball',               category: 'Sports',       difficulty: 'Intermediate' },
+  { id: '31', name: 'Tennis / Badminton',       category: 'Sports',       difficulty: 'Intermediate' },
+  { id: '54', name: 'Burpees',                  category: 'HIIT',         difficulty: 'Intermediate' },
+  { id: '55', name: 'Mountain Climbers',        category: 'HIIT',         difficulty: 'Intermediate' },
+  // Advanced
+  { id: '11', name: 'Heavy Lifting',            category: 'Strength',     difficulty: 'Advanced' },
+  { id: '32', name: 'Sprinting Intervals',      category: 'Cardio',       difficulty: 'Advanced' },
+  { id: '33', name: 'CrossFit WOD',             category: 'HIIT',         difficulty: 'Advanced' },
+  { id: '34', name: 'Olympic Weightlifting',    category: 'Strength',     difficulty: 'Advanced' },
+  { id: '35', name: 'Triathlon Training',       category: 'Cardio',       difficulty: 'Advanced' },
+  { id: '36', name: 'Rock Climbing',            category: 'Sports',       difficulty: 'Advanced' },
+  { id: '37', name: 'Advanced Yoga (Ashtanga)', category: 'Flexibility',  difficulty: 'Advanced' },
+  { id: '57', name: 'Muscle-Ups',               category: 'Strength',     difficulty: 'Advanced' },
+  { id: '58', name: 'Powerlifting',             category: 'Strength',     difficulty: 'Advanced' },
+  { id: '59', name: 'Ironman Training',         category: 'Cardio',       difficulty: 'Advanced' },
+  { id: '60', name: 'Advanced Calisthenics',    category: 'Strength',     difficulty: 'Advanced' },
+  { id: '61', name: 'Bouldering',               category: 'Sports',       difficulty: 'Advanced' },
+  { id: '62', name: 'Plyometric Push-ups',      category: 'Strength',     difficulty: 'Advanced' },
+  { id: '63', name: 'Handstand Push-ups',       category: 'Strength',     difficulty: 'Advanced' },
+  { id: '64', name: 'Sled Pushes',              category: 'Strength',     difficulty: 'Advanced' },
+  { id: '65', name: 'Battle Ropes',             category: 'Strength',     difficulty: 'Advanced' },
+  { id: '66', name: 'Parkour',                  category: 'Sports',       difficulty: 'Advanced' }
 ];
 
 export const api = {
@@ -348,7 +410,10 @@ export const api = {
     } else if (goal_type === 'build_muscle') {
       recs = recs.filter(e => e.category === 'Strength');
     }
-    return mockResponse(recs.slice(0, 5));
+    
+    // Shuffle the recommendations and display up to 12 at a time
+    const shuffled = recs.sort(() => 0.5 - Math.random());
+    return mockResponse(shuffled.slice(0, 12));
   },
   
   getLogs: async (userId: string) => {
