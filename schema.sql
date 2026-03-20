@@ -3,7 +3,9 @@ CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE,
   age INTEGER,
-  gender TEXT
+  gender TEXT,
+  avatar TEXT,
+  weekly_goal INTEGER DEFAULT 150
 );
 
 -- Exercises library for recommendations
@@ -13,7 +15,8 @@ CREATE TABLE IF NOT EXISTS exercises (
   category TEXT,
   min_age INTEGER,
   max_age INTEGER,
-  gender_target TEXT
+  gender_target TEXT,
+  difficulty TEXT
 );
 
 -- Activity logs
