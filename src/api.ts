@@ -6,6 +6,9 @@ export interface UserProfile {
   avatar?: string;
   weekly_goal: number;
   is_admin?: boolean;
+  weight?: number;
+  target_weight?: number;
+  goal_type?: string;
 }
 
 export interface Exercise {
@@ -19,6 +22,12 @@ export interface ActivityLog {
   id: string;
   exercise_name: string;
   duration: number;
+  date: string;
+}
+
+export interface WeightLog {
+  id: string;
+  weight: number;
   date: string;
 }
 
@@ -41,7 +50,7 @@ export interface Achievement {
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, deleteUser as deleteAuthUser, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, getCountFromServer } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, getCountFromServer, enableIndexedDbPersistence, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 // TODO: Replace with your actual Firebase Project config!
 const firebaseConfig = {
@@ -56,6 +65,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    console.warn('Firebase offline caching failed: Multiple tabs open.');
+  } else if (err.code === 'unimplemented') {
+    console.warn('Firebase offline caching not supported by this browser.');
+  }
+});
+
 const googleProvider = new GoogleAuthProvider();
 
 const mockResponse = (data?: any, ok = true, status = 200) => ({
@@ -118,7 +136,10 @@ export const api = {
         gender: data.gender,
         avatar: data.avatar || null,
         weekly_goal: data.weekly_goal || 150,
-        is_admin: false
+        is_admin: false,
+        weight: data.weight || null,
+        target_weight: data.target_weight || null,
+        goal_type: data.goal_type || 'maintain'
       };
       await setDoc(doc(db, 'users', cred.user.uid), userDoc);
       return mockResponse({ user: userDoc, token: 'firebase-token' });
@@ -155,7 +176,10 @@ export const api = {
           gender: 'other',
           avatar: cred.user.photoURL || null,
           weekly_goal: 150,
-          is_admin: false
+          is_admin: false,
+          weight: null,
+          target_weight: null,
+          goal_type: 'maintain'
         };
         await setDoc(userRef, userDoc);
       }
@@ -215,8 +239,34 @@ export const api = {
     }
   },
   
-  getRecommendations: async (age: number, gender: string) => {
-    return mockResponse(SEED_EXERCISES.slice(0, 5));
+  getAllUsers: async () => {
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      const users = snap.docs.map(d => ({ ...d.data() } as UserProfile));
+      return mockResponse(users);
+    } catch (e) {
+      return mockResponse([], false, 500);
+    }
+  },
+  
+  getWeightLogs: async (userId: string) => {
+    try {
+      const snap = await getDocs(query(collection(db, 'weight_logs'), where('user_id', '==', userId)));
+      const logs = snap.docs.map(d => ({ id: d.id, ...d.data() } as WeightLog)).sort((a, b) => a.date.localeCompare(b.date));
+      return mockResponse(logs);
+    } catch (e) {
+      return mockResponse([], false, 500);
+    }
+  },
+  
+  getRecommendations: async (age: number, gender: string, goal_type?: string) => {
+    let recs = [...SEED_EXERCISES];
+    if (goal_type === 'lose_weight') {
+      recs = recs.filter(e => e.category === 'Cardio' || e.category === 'Flexibility');
+    } else if (goal_type === 'build_muscle') {
+      recs = recs.filter(e => e.category === 'Strength');
+    }
+    return mockResponse(recs.slice(0, 5));
   },
   
   getLogs: async (userId: string) => {
@@ -229,17 +279,15 @@ export const api = {
     }
   },
   
-  getStats: async (userId: string, range: 'week' | 'month' = 'week') => {
+  getStats: async (logs: ActivityLog[], range: 'week' | 'month' = 'week') => {
     try {
       const days = range === 'month' ? 30 : 7;
       const d = new Date(); d.setDate(d.getDate() - days);
       const dateStr = d.toISOString().split('T')[0];
       
-      const snap = await getDocs(query(collection(db, 'activity_logs'), where('user_id', '==', userId)));
       const statsMap: Record<string, number> = {};
       
-      snap.docs.forEach(doc => {
-        const data = doc.data() as ActivityLog;
+      logs.forEach(data => {
         if (data.date >= dateStr) {
           statsMap[data.date] = (statsMap[data.date] || 0) + data.duration;
         }
@@ -252,38 +300,48 @@ export const api = {
     }
   },
   
-  getGoals: async () => {
+  getGoals: async (logs: ActivityLog[], targetGoal: number) => {
     try {
-      if (!auth.currentUser) throw new Error('Not auth');
-      const uid = auth.currentUser.uid;
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      const targetGoal = userDoc.data()?.weekly_goal || 150;
-      
       const d = new Date(); d.setDate(d.getDate() - 7);
       const dateStr = d.toISOString().split('T')[0];
       
-      const snap = await getDocs(query(collection(db, 'activity_logs'), where('user_id', '==', uid)));
-      const currentTotal = snap.docs.reduce((sum, doc) => doc.data().date >= dateStr ? sum + doc.data().duration : sum, 0);
+      const currentTotal = logs.reduce((sum, doc) => doc.date >= dateStr ? sum + doc.duration : sum, 0);
       
       return mockResponse({ current_weekly_total: currentTotal, target_goal: targetGoal });
     } catch (e) {
-      return mockResponse({ current_weekly_total: 0, target_goal: 150 });
+      return mockResponse({ current_weekly_total: 0, target_goal: targetGoal });
     }
   },
   
-  getAchievements: async () => {
+  getAchievements: async (logs: ActivityLog[]) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
-      const snap = await getDocs(query(collection(db, 'activity_logs'), where('user_id', '==', auth.currentUser.uid)));
-      
-      const count = snap.docs.length;
-      const dur = snap.docs.reduce((sum, doc) => sum + doc.data().duration, 0);
-      const ach = [];
+      const uid = auth.currentUser.uid;
+
+      const count = logs.length;
+      const dur = logs.reduce((sum, doc) => sum + doc.duration, 0);
+      const ach: Achievement[] = [];
       
       if (count >= 1) ach.push({ id: 'first_step', name: 'First Step', description: 'Logged your first activity', icon: 'Star' });
       if (count >= 5) ach.push({ id: 'getting_serious', name: 'Getting Serious', description: 'Logged 5 total activities', icon: 'Medal' });
       if (dur >= 100) ach.push({ id: 'century_club', name: 'Century Club', description: 'Reached 100 active minutes', icon: 'Award' });
       if (dur >= 500) ach.push({ id: 'marathoner', name: 'Marathoner', description: 'Reached 500 active minutes', icon: 'Trophy' });
+      
+      // Check against Firestore to see which badges are already saved
+      const earnedSnap = await getDocs(collection(db, `users/${uid}/earned_badges`));
+      const earnedIds = new Set(earnedSnap.docs.map(d => d.id));
+
+      const newBadges = ach.filter(b => !earnedIds.has(b.id));
+
+      // Save any newly unlocked badges
+      if (newBadges.length > 0) {
+        const batch = writeBatch(db);
+        for (const badge of newBadges) {
+          const badgeRef = doc(db, `users/${uid}/earned_badges`, badge.id);
+          batch.set(badgeRef, { ...badge, earned_at: serverTimestamp() });
+        }
+        await batch.commit();
+      }
       
       return mockResponse(ach);
     } catch (e) { return mockResponse([]); }
@@ -291,11 +349,44 @@ export const api = {
   
   logActivity: async (data: any) => {
     try {
-      await addDoc(collection(db, 'activity_logs'), data);
+      if (!auth.currentUser) throw new Error('Not auth');
+      
+      const batch = writeBatch(db);
+      const newLogRef = doc(collection(db, 'activity_logs'));
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      
+      batch.set(newLogRef, data);
+      batch.update(userRef, { last_logged_at: serverTimestamp() });
+      await batch.commit();
+      
       return mockResponse({ success: true });
     } catch (e) { return mockResponse({ error: 'Failed' }, false, 500); }
   },
     
+  logWeight: async (weight: number) => {
+    try {
+      if (!auth.currentUser) throw new Error('Not auth');
+      const dateStr = new Date().toISOString().split('T')[0];
+      
+      const batch = writeBatch(db);
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      batch.update(userRef, { weight });
+
+      const q = query(collection(db, 'weight_logs'), where('user_id', '==', auth.currentUser.uid), where('date', '==', dateStr));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        batch.update(snap.docs[0].ref, { weight });
+      } else {
+        const newLogRef = doc(collection(db, 'weight_logs'));
+        batch.set(newLogRef, { user_id: auth.currentUser.uid, weight, date: dateStr });
+      }
+      
+      await batch.commit();
+      return mockResponse({ success: true });
+    } catch (e) { return mockResponse({ error: 'Failed' }, false, 500); }
+  },
+
   updateLog: async (logId: string, data: any) => {
     try {
       await updateDoc(doc(db, 'activity_logs', logId), data);

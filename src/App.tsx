@@ -37,11 +37,12 @@ import {
   Tooltip, 
   ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
+  ReferenceLine
 } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { api, type UserProfile, type Exercise, type ActivityLog, type DailyStat, type WeeklyGoal, type Achievement } from './api';
+import { api, type UserProfile, type Exercise, type ActivityLog, type DailyStat, type WeeklyGoal, type Achievement, type WeightLog } from './api';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -145,6 +146,9 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('other');
+  const [weight, setWeight] = useState('');
+  const [targetWeight, setTargetWeight] = useState('');
+  const [goalType, setGoalType] = useState('maintain');
   const [error, setError] = useState('');
   
   const [recommendations, setRecommendations] = useState<Exercise[]>([]);
@@ -161,29 +165,43 @@ export default function App() {
   const [statsRange, setStatsRange] = useState<'week' | 'month'>('week');
   const statsRangeRef = useRef<'week' | 'month'>('week');
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [usersPage, setUsersPage] = useState(1);
   const [announcement, setAnnouncement] = useState<{message: string, date: string} | null>(null);
   const [adminAnnouncement, setAdminAnnouncement] = useState('');
   const [dismissedDate, setDismissedDate] = useState(localStorage.getItem('fittrack_dismissed_announcement') || '');
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   
   // Modal state for logging from suggestions
   const [logModal, setLogModal] = useState<{ exercise: string; open: boolean }>({ exercise: '', open: false });
   const [editModal, setEditModal] = useState<{ log: ActivityLog | null; open: boolean }>({ log: null, open: false });
+  const [logWeightModal, setLogWeightModal] = useState(false);
 
   const fetchUserData = useCallback(async (u: UserProfile) => {
     try {
-      const [recRes, logRes, statRes, goalRes, achRes] = await Promise.all([
-        api.getRecommendations(u.age, u.gender),
+      const [recRes, logRes, weightRes] = await Promise.all([
+        api.getRecommendations(u.age, u.gender, u.goal_type),
         api.getLogs(u.id),
-        api.getStats(u.id, statsRangeRef.current),
-        api.getGoals(),
-        api.getAchievements()
+        api.getWeightLogs(u.id)
       ]);
       
       if (recRes.ok) setRecommendations(await recRes.json());
-      if (logRes.ok) setLogs(await logRes.json());
-      if (statRes.ok) setStats(await statRes.json());
-      if (goalRes.ok) setGoal(await goalRes.json());
-      if (achRes.ok) setAchievements(await achRes.json());
+      if (weightRes.ok) setWeightLogs(await weightRes.json());
+      
+      if (logRes.ok) {
+        const logsData = await logRes.json();
+        setLogs(logsData);
+        
+        const [statRes, goalRes, achRes] = await Promise.all([
+          api.getStats(logsData, statsRangeRef.current),
+          api.getGoals(logsData, u.weekly_goal),
+          api.getAchievements(logsData)
+        ]);
+        
+        if (statRes.ok) setStats(await statRes.json());
+        if (goalRes.ok) setGoal(await goalRes.json());
+        if (achRes.ok) setAchievements(await achRes.json());
+      }
     } catch (err) {
       console.error("Failed to fetch data", err);
     }
@@ -224,6 +242,19 @@ export default function App() {
   const indexOfFirstLog = indexOfLastLog - logsPerPage;
   const currentLogs = sortedLogs.slice(indexOfFirstLog, indexOfLastLog);
 
+  const usersPerPage = 5;
+  const totalUsersPages = Math.ceil(allUsers.length / usersPerPage);
+  
+  useEffect(() => {
+    if (usersPage > totalUsersPages && totalUsersPages > 0) {
+      setUsersPage(totalUsersPages);
+    }
+  }, [allUsers.length, totalUsersPages, usersPage]);
+
+  const indexOfLastUser = usersPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = allUsers.slice(indexOfFirstUser, indexOfLastUser);
+
   const filteredRecommendations = difficultyFilter === 'All'
     ? recommendations
     : recommendations.filter(r => r.difficulty === difficultyFilter);
@@ -255,7 +286,7 @@ export default function App() {
     statsRangeRef.current = range;
     if (user) {
       try {
-        const res = await api.getStats(user.id, range);
+        const res = await api.getStats(logs, range);
         if (res.ok) setStats(await res.json());
       } catch (err) { console.error(err); }
     }
@@ -307,7 +338,15 @@ export default function App() {
     setError('');
     
     if (authMode === 'signup') {
-      const res = await api.signup({ username, password, age: parseInt(age), gender });
+      const res = await api.signup({ 
+        username, 
+        password, 
+        age: parseInt(age), 
+        gender,
+        weight: weight ? parseFloat(weight) : undefined,
+        target_weight: targetWeight ? parseFloat(targetWeight) : undefined,
+        goal_type: goalType
+      });
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
@@ -351,6 +390,9 @@ export default function App() {
     setPassword('');
     setAge('');
     setGender('other');
+    setWeight('');
+    setTargetWeight('');
+    setGoalType('maintain');
   };
 
   const toggleTheme = () => {
@@ -365,10 +407,17 @@ export default function App() {
   };
 
   const fetchAdminData = async () => {
-    const res = await api.getTotalUsers();
-    if (res.ok) {
-      const data = await res.json();
+    const [countRes, usersRes] = await Promise.all([
+      api.getTotalUsers(),
+      api.getAllUsers()
+    ]);
+    if (countRes.ok) {
+      const data = await countRes.json();
       setTotalUsers(data.count);
+    }
+    if (usersRes.ok) {
+      const data = await usersRes.json();
+      setAllUsers(data);
     }
   };
 
@@ -527,6 +576,44 @@ export default function App() {
                 </div>
               </div>
             )}
+            {authMode === 'signup' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Current Weight</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Target Weight</label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={targetWeight}
+                    onChange={(e) => setTargetWeight(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Fitness Goal</label>
+                  <select 
+                    value={goalType}
+                    onChange={(e) => setGoalType(e.target.value)}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-all [&>option]:bg-white dark:[&>option]:bg-zinc-900"
+                  >
+                    <option value="maintain">Maintain Weight</option>
+                    <option value="lose_weight">Lose Weight</option>
+                    <option value="build_muscle">Build Muscle</option>
+                  </select>
+                </div>
+              </div>
+            )}
             <Button type="submit" className="w-full mt-4">
               {authMode === 'signup' ? 'Create Profile' : 'Login'}
             </Button>
@@ -649,39 +736,71 @@ export default function App() {
         {view === 'dashboard' && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="md:col-span-2">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    <TrendingUp size={20} className="text-emerald-500" />
-                    Activity Stats
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <select 
-                      value={statsRange}
-                      onChange={(e) => handleStatsRangeChange(e.target.value as 'week' | 'month')}
-                      className="text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 outline-none text-zinc-600 dark:text-zinc-300 transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"
-                    >
-                      <option value="week">Last 7 days</option>
-                      <option value="month">Last 30 days</option>
-                    </select>
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500 hidden sm:inline">(minutes)</span>
+              <div className="md:col-span-2 space-y-6">
+                <Card>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                      <TrendingUp size={20} className="text-emerald-500" />
+                      Activity Stats
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <select 
+                        value={statsRange}
+                        onChange={(e) => handleStatsRangeChange(e.target.value as 'week' | 'month')}
+                        className="text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 outline-none text-zinc-600 dark:text-zinc-300 transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"
+                      >
+                        <option value="week">Last 7 days</option>
+                        <option value="month">Last 30 days</option>
+                      </select>
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500 hidden sm:inline">(minutes)</span>
+                    </div>
                   </div>
-                </div>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                      <Tooltip 
-                        cursor={{fill: isDark ? '#27272a' : '#f8fafc'}}
-                        contentStyle={{backgroundColor: isDark ? '#18181b' : 'white', borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: isDark ? 'white' : 'black'}}
-                      />
-                      <Bar dataKey="total_duration" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                        <Tooltip 
+                          cursor={{fill: isDark ? '#27272a' : '#f8fafc'}}
+                          contentStyle={{backgroundColor: isDark ? '#18181b' : 'white', borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: isDark ? 'white' : 'black'}}
+                        />
+                        <Bar dataKey="total_duration" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+                
+                <Card>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                      <TrendingUp size={20} className="text-blue-500" />
+                      Weight Progress
+                    </h2>
+                  </div>
+                  <div className="h-64 w-full">
+                    {weightLogs.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={weightLogs}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                          <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} width={40} />
+                          <Tooltip 
+                            cursor={{stroke: isDark ? '#27272a' : '#f8fafc', strokeWidth: 2}}
+                            contentStyle={{backgroundColor: isDark ? '#18181b' : 'white', borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: isDark ? 'white' : 'black'}}
+                          />
+                          {user?.target_weight && (
+                            <ReferenceLine y={user.target_weight} stroke="#10b981" strokeDasharray="5 5" label={{ value: 'Target', position: 'top', fill: '#10b981', fontSize: 12, fontWeight: 500 }} />
+                          )}
+                          <Line type="monotone" dataKey="weight" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, fill: '#3b82f6'}} activeDot={{r: 6}} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-sm text-zinc-400 italic">No weight logs yet. Log your weight to see progress!</div>
+                    )}
+                  </div>
+                </Card>
+              </div>
 
               <div className="space-y-6">
                 <Card>
@@ -707,6 +826,16 @@ export default function App() {
                       <div className="flex items-center gap-3">
                         <Activity size={20} />
                         <span className="font-medium">Get Suggestions</span>
+                      </div>
+                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    <button 
+                      onClick={() => setLogWeightModal(true)}
+                      className="w-full flex items-center justify-between p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <PlusCircle size={20} />
+                        <span className="font-medium">Log Weight</span>
                       </div>
                       <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </button>
@@ -998,9 +1127,14 @@ export default function App() {
                 const newPassword = formData.get('password') as string;
                 const newAvatar = formData.get('avatar') as string;
                 const newWeeklyGoal = parseInt(formData.get('weekly_goal') as string);
+                const newWeight = parseFloat(formData.get('weight') as string);
+                const newTargetWeight = parseFloat(formData.get('target_weight') as string);
+                const newGoalType = formData.get('goal_type') as string;
                 
-                const updateData: any = { age: newAge, gender: newGender, avatar: newAvatar, weekly_goal: newWeeklyGoal };
+                const updateData: any = { age: newAge, gender: newGender, avatar: newAvatar, weekly_goal: newWeeklyGoal, goal_type: newGoalType };
                 if (newPassword) updateData.password = newPassword;
+                if (!isNaN(newWeight)) updateData.weight = newWeight;
+                if (!isNaN(newTargetWeight)) updateData.target_weight = newTargetWeight;
 
                 const res = await api.updateProfile(updateData);
                 if (res.ok) {
@@ -1043,6 +1177,26 @@ export default function App() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Current Weight</label>
+                  <input 
+                    name="weight"
+                    type="number" 
+                    step="0.1"
+                    defaultValue={user.weight || ''}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Target Weight</label>
+                  <input 
+                    name="target_weight"
+                    type="number" 
+                    step="0.1"
+                    defaultValue={user.target_weight || ''}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Gender</label>
                   <select 
                     name="gender"
@@ -1052,6 +1206,18 @@ export default function App() {
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                     <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Fitness Goal</label>
+                  <select 
+                    name="goal_type"
+                    defaultValue={user.goal_type || 'maintain'}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"
+                  >
+                    <option value="maintain">Maintain Weight</option>
+                    <option value="lose_weight">Lose Weight</option>
+                    <option value="build_muscle">Build Muscle</option>
                   </select>
                 </div>
                 <div>
@@ -1090,7 +1256,7 @@ export default function App() {
         )}
 
         {view === 'admin' && user.is_admin && (
-          <div className="max-w-md mx-auto">
+          <div className="max-w-3xl mx-auto space-y-6">
             <Card>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold flex items-center gap-2">
@@ -1099,34 +1265,110 @@ export default function App() {
                 </h2>
                 <Button variant="outline" onClick={() => setView('dashboard')}>Back</Button>
               </div>
-              <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center justify-center transition-colors">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">Total Registered Users</p>
-                <p className="text-5xl font-bold text-zinc-900 dark:text-zinc-100">
-                  {totalUsers !== null ? totalUsers : '...'}
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800 flex flex-col items-center justify-center transition-colors">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">Total Registered Users</p>
+                  <p className="text-5xl font-bold text-zinc-900 dark:text-zinc-100">
+                    {totalUsers !== null ? totalUsers : '...'}
+                  </p>
+                </div>
+                <div className="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800 transition-colors">
+                  <h3 className="text-lg font-bold mb-4">Broadcast Announcement</h3>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    await api.updateAnnouncement(adminAnnouncement);
+                    setAdminAnnouncement('');
+                    alert('Announcement broadcasted!');
+                  }} className="space-y-3">
+                    <textarea
+                      value={adminAnnouncement}
+                      onChange={e => setAdminAnnouncement(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                      placeholder="Type a message to all users..."
+                      rows={3}
+                      required
+                    />
+                    <div className="flex gap-2">
+                      <Button type="submit" className="flex-1">Broadcast</Button>
+                      <Button type="button" variant="outline" onClick={async () => { await api.updateAnnouncement(''); alert('Announcement cleared'); }}>Clear</Button>
+                    </div>
+                  </form>
+                </div>
               </div>
-              <div className="mt-6 p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800 transition-colors">
-                <h3 className="text-lg font-bold mb-4">Broadcast Announcement</h3>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  await api.updateAnnouncement(adminAnnouncement);
-                  setAdminAnnouncement('');
-                  alert('Announcement broadcasted!');
-                }} className="space-y-3">
-                  <textarea
-                    value={adminAnnouncement}
-                    onChange={e => setAdminAnnouncement(e.target.value)}
-                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
-                    placeholder="Type a message to all users..."
-                    rows={3}
-                    required
-                  />
+            </Card>
+
+            <Card>
+              <h3 className="text-lg font-bold mb-4">User Directory</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800 transition-colors">
+                      <th className="pb-3">User</th>
+                      <th className="pb-3">Age</th>
+                      <th className="pb-3">Gender</th>
+                      <th className="pb-3">Goal</th>
+                      <th className="pb-3 text-right">Role</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 transition-colors">
+                    {currentUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-zinc-500 dark:text-zinc-400 italic">No users found.</td>
+                      </tr>
+                    ) : (
+                      currentUsers.map(u => (
+                        <tr key={u.id} className="text-sm text-zinc-600 dark:text-zinc-300">
+                          <td className="py-3 flex items-center gap-2">
+                            {u.avatar ? (
+                              <img src={u.avatar} alt={u.username} className="w-6 h-6 rounded-full object-cover border border-zinc-200 dark:border-zinc-700" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
+                                <User size={12} />
+                              </div>
+                            )}
+                            <span className="font-medium text-zinc-900 dark:text-zinc-100">{u.username}</span>
+                          </td>
+                          <td className="py-3">{u.age}</td>
+                          <td className="py-3 capitalize">{u.gender}</td>
+                          <td className="py-3">{u.weekly_goal}m</td>
+                          <td className="py-3 text-right">
+                            {u.is_admin ? (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded transition-colors">Admin</span>
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 px-2 py-1 rounded transition-colors">User</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {totalUsersPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 transition-colors">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, allUsers.length)} of {allUsers.length} users
+                  </span>
                   <div className="flex gap-2">
-                    <Button type="submit" className="flex-1">Broadcast</Button>
-                    <Button type="button" variant="outline" onClick={async () => { await api.updateAnnouncement(''); alert('Announcement cleared'); }}>Clear</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                      disabled={usersPage === 1}
+                      className="px-3 py-1.5 text-sm"
+                    >
+                      Previous
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setUsersPage(p => Math.min(totalUsersPages, p + 1))}
+                      disabled={usersPage === totalUsersPages}
+                      className="px-3 py-1.5 text-sm"
+                    >
+                      Next
+                    </Button>
                   </div>
-                </form>
-              </div>
+                </div>
+              )}
             </Card>
           </div>
         )}
@@ -1161,6 +1403,45 @@ export default function App() {
                   Log Now
                 </Button>
                 <Button variant="outline" onClick={() => setLogModal({ exercise: '', open: false })}>Cancel</Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Log Weight Modal */}
+      {logWeightModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-sm">
+            <h3 className="text-xl font-bold mb-2">Log Weight</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 mb-6">Keep track of your current weight.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Weight</label>
+                <input 
+                  autoFocus
+                  type="number" 
+                  step="0.1"
+                  defaultValue={user?.weight || ''}
+                  id="modal-weight"
+                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  className="flex-1"
+                  onClick={async () => {
+                    const weightVal = parseFloat((document.getElementById('modal-weight') as HTMLInputElement).value);
+                    if (weightVal) {
+                      await api.logWeight(weightVal);
+                      if (user) fetchUserData({ ...user, weight: weightVal });
+                      setLogWeightModal(false);
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+                <Button variant="outline" onClick={() => setLogWeightModal(false)}>Cancel</Button>
               </div>
             </div>
           </Card>
