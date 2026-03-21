@@ -166,8 +166,6 @@ export const api = {
   signup: async (data: any) => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const sendCustomVerificationEmail = httpsCallable(functions, 'sendCustomVerificationEmail');
-      await sendCustomVerificationEmail({ email: data.email, displayName: data.username });
       const userDoc = {
         id: cred.user.uid,
         username: data.username,
@@ -214,7 +212,14 @@ export const api = {
         const sendCustomVerificationEmail = httpsCallable(functions, 'sendCustomVerificationEmail');
         const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
         const displayName = userDoc.exists() ? userDoc.data().username : 'User';
-        await sendCustomVerificationEmail({ email: data.email, displayName });
+        
+        try {
+          await sendCustomVerificationEmail({ email: data.email, displayName });
+        } catch (emailErr) {
+          console.error("Failed to send verification email:", emailErr);
+          await signOut(auth);
+          return mockResponse({ error: 'Failed to send verification email. Please check your cloud function permissions.' }, false, 500);
+        }
         await signOut(auth);
         return mockResponse({ success: true });
       }
