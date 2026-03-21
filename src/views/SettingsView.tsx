@@ -1,82 +1,52 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button } from '../ui';
-import { Upload, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { api, type UserProfile } from '../api';
 import { cn, getPasswordStrength, PREDEFINED_AVATARS } from '../utils';
-import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SettingsViewProps {
   user: UserProfile;
   setUser: (user: UserProfile) => void;
   fetchUserData: (user: UserProfile) => void;
   setView: (view: any) => void;
-  showToast: (message: string, type: 'success' | 'error') => void;
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
   onAccountDeleted: () => void;
 }
 
 export function SettingsView({ user, setUser, fetchUserData, setView, showToast, onAccountDeleted }: SettingsViewProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [editAvatar, setEditAvatar] = useState(user.avatar || PREDEFINED_AVATARS[0]);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<{file: File, url: string} | null>(null);
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   const [settingsNewPassword, setSettingsNewPassword] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (confirmDialog?.isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [confirmDialog?.isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const customAvatarSource = !PREDEFINED_AVATARS.includes(editAvatar) 
     ? editAvatar 
     : (user.avatar && !PREDEFINED_AVATARS.includes(user.avatar) ? user.avatar : null);
-
-  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    const crop = centerCrop(
-      makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
-      width,
-      height
-    );
-    setCrop(crop);
-  };
-
-  const getCroppedImg = async (image: HTMLImageElement, crop: PixelCrop, fileName: string): Promise<File> => {
-    const canvas = document.createElement('canvas');
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    
-    const pixelRatio = window.devicePixelRatio;
-    canvas.width = Math.floor(crop.width * scaleX * pixelRatio);
-    canvas.height = Math.floor(crop.height * scaleY * pixelRatio);
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('No 2d context');
-
-    ctx.scale(pixelRatio, pixelRatio);
-    ctx.imageSmoothingQuality = 'high';
-
-    ctx.drawImage(
-      image,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
-      0,
-      0,
-      crop.width * scaleX,
-      crop.height * scaleY
-    );
-
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(blob => {
-        if (!blob) {
-          reject(new Error('Canvas is empty'));
-          return;
-        }
-        resolve(new File([blob], fileName, { type: 'image/jpeg' }));
-      }, 'image/jpeg', 0.95);
-    });
-  };
 
   const handleDeleteAccount = () => {
     setConfirmDialog({
@@ -106,6 +76,7 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
       
       <form onSubmit={async (e) => {
         e.preventDefault();
+        setIsSaving(true);
         const formData = new FormData(e.currentTarget);
         const newAge = parseInt(formData.get('age') as string);
         const newGender = formData.get('gender') as string;
@@ -123,14 +94,17 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
         if (newPassword) {
           if (!oldPassword) {
             showToast('Please enter your current password to change it.', 'error');
+            setIsSaving(false);
             return;
           }
           if (newPassword !== confirmPassword) {
             showToast('New passwords do not match.', 'error');
+            setIsSaving(false);
             return;
           }
           if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
             showToast('New password must be at least 8 characters long, and contain at least 1 uppercase letter, 1 number, and 1 special character.', 'error');
+            setIsSaving(false);
             return;
           }
           updateData.password = newPassword;
@@ -151,6 +125,7 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
           const data = await res.json();
           showToast(data.error || 'Failed to update profile', 'error');
         }
+        setIsSaving(false);
       }} className="space-y-6">
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -300,39 +275,6 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <span className="text-sm text-zinc-500 dark:text-zinc-400">Or upload a custom image:</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="avatar-upload"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file || !user) return;
-                    
-                    if (file.size > 2 * 1024 * 1024) {
-                      alert("Image must be less than 2MB");
-                      e.target.value = '';
-                      return;
-                    }
-
-                    const url = URL.createObjectURL(file);
-                    setAvatarPreview({ file, url });
-                    e.target.value = '';
-                  }}
-                />
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="flex items-center gap-2 text-sm py-1.5 px-3"
-                  disabled={isUploadingAvatar}
-                  onClick={() => document.getElementById('avatar-upload')?.click()}
-                >
-                  <Upload size={16} />
-                  {isUploadingAvatar ? 'Uploading...' : 'Upload Custom Image'}
-                </Button>
-              </div>
               <input type="hidden" name="avatar" value={editAvatar} />
             </div>
           </Card>
@@ -342,12 +284,21 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Current Password</label>
-                <input 
-                  name="old_password"
-                  type="password" 
-                  placeholder="Enter current password"
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
-                />
+                <div className="relative">
+                  <input 
+                    name="old_password"
+                    type={showOldPassword ? "text" : "password"} 
+                    placeholder="Enter current password"
+                    className="w-full px-4 py-2 pr-10 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPassword(!showOldPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">New Password</label>
@@ -382,21 +333,49 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Confirm New Password</label>
-                <input 
-                  name="confirm_password"
-                  type="password" 
-                  placeholder="Confirm new password"
-                  className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
-                />
+                <div className="relative">
+                  <input 
+                    name="confirm_password"
+                    type={showConfirmPassword ? "text" : "password"} 
+                    placeholder="Confirm new password"
+                    className="w-full px-4 py-2 pr-10 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Preferences</label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full text-sm"
+                  onClick={() => {
+                    localStorage.removeItem(`fittrack_skip_onboarding_${user.id}`);
+                    showToast('Onboarding preference reset. The setup modal will appear again if your profile is incomplete.', 'info');
+                  }}
+                >
+                  Restore Onboarding Prompt
+                </Button>
               </div>
 
               <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row gap-3">
-                <Button type="submit" className="flex-1">Save Changes</Button>
+                <Button type="submit" className="flex-1 flex items-center justify-center gap-2" disabled={isSaving}>
+                  {isSaving && <Loader2 size={16} className="animate-spin" />}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
                 <Button 
                   type="button" 
                   variant="outline"
                   onClick={handleDeleteAccount}
                   className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 dark:border-red-900/50"
+                  disabled={isSaving}
                 >
                   Delete Account
                 </Button>
@@ -406,85 +385,35 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
         </div>
       </form>
 
-      {avatarPreview && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-          <Card className="w-full max-w-sm text-center flex flex-col max-h-[90vh]">
-            <h3 className="text-xl font-bold mb-4 shrink-0">Crop Profile Picture</h3>
-            <div className="flex-1 overflow-y-auto mb-6 flex justify-center items-center bg-zinc-100 dark:bg-zinc-900/50 rounded-xl relative">
-              <ReactCrop
-                crop={crop}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
-                onComplete={(c) => setCompletedCrop(c)}
-                aspect={1}
-                circularCrop
-              >
-                <img 
-                  ref={imgRef}
-                  src={avatarPreview.url} 
-                  alt="Avatar Preview" 
-                  onLoad={onImageLoad}
-                  className="max-h-[50vh] object-contain"
-                />
-              </ReactCrop>
-            </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 shrink-0">Adjust the circular frame to crop your new avatar.</p>
-            <div className="flex gap-3 shrink-0">
-              <Button 
-                className="flex-1"
-                disabled={!completedCrop || isUploadingAvatar}
-                onClick={async () => {
-                  if (!user || !completedCrop || !imgRef.current) return;
-                  setIsUploadingAvatar(true);
-                  
-                  try {
-                    const croppedFile = await getCroppedImg(imgRef.current, completedCrop, avatarPreview.file.name);
-                    const res = await api.uploadAvatar(croppedFile, user.id, user.avatar);
-                    if (res.ok) {
-                      const data = await res.json();
-                      setEditAvatar(data.url);
-                      showToast('Avatar updated successfully!', 'success');
-                      setAvatarPreview(null);
-                    } else {
-                      showToast("Failed to upload avatar", 'error');
-                    }
-                  } catch (err) {
-                    showToast("Error processing image crop", 'error');
-                  } finally {
-                    setIsUploadingAvatar(false);
-                    URL.revokeObjectURL(avatarPreview.url);
-                  }
-                }}
-              >
-                Upload
-              </Button>
-              <Button variant="outline" onClick={() => { URL.revokeObjectURL(avatarPreview.url); setAvatarPreview(null); }}>
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {isUploadingAvatar && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-[100] text-white">
-          <Loader2 size={48} className="animate-spin text-emerald-500 mb-4" />
-          <h3 className="text-xl font-bold">Uploading...</h3>
-          <p className="text-white/80 mt-2 text-sm">Please wait while we save your new avatar.</p>
-        </div>
-      )}
-
-      {confirmDialog?.isOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-          <Card className="w-full max-w-sm">
+      <AnimatePresence>
+        {confirmDialog?.isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setConfirmDialog(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="w-full max-w-sm"
+            >
+              <Card className="w-full">
             <h3 className="text-xl font-bold mb-2 text-zinc-900 dark:text-zinc-100">{confirmDialog.title}</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{confirmDialog.message}</p>
             <div className="flex gap-3">
               <Button className={cn("flex-1", confirmDialog.title.includes('Delete') ? "bg-red-600 hover:bg-red-700 text-white" : "")} onClick={confirmDialog.onConfirm}>Confirm</Button>
               <Button variant="outline" onClick={() => setConfirmDialog(null)}>Cancel</Button>
             </div>
-          </Card>
-        </div>
-      )}
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

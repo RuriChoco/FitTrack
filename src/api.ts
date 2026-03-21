@@ -55,6 +55,7 @@ import { getAnalytics } from 'firebase/analytics';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, deleteUser as deleteAuthUser, GoogleAuthProvider, signInWithPopup, connectAuthEmulator, sendEmailVerification, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, getCountFromServer, enableIndexedDbPersistence, writeBatch, serverTimestamp, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, connectStorageEmulator, deleteObject } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -71,12 +72,14 @@ const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
 if (import.meta.env.DEV) {
   // Connect to local emulators during development
   connectAuthEmulator(auth, "http://127.0.0.1:9099");
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   connectStorageEmulator(storage, '127.0.0.1', 9199);
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
   console.log('Connected to Firebase Local Emulators');
 } else {
   enableIndexedDbPersistence(db).catch((err) => {
@@ -163,7 +166,8 @@ export const api = {
   signup: async (data: any) => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await sendEmailVerification(cred.user);
+      const sendCustomVerificationEmail = httpsCallable(functions, 'sendCustomVerificationEmail');
+      await sendCustomVerificationEmail({ email: data.email, displayName: data.username });
       const userDoc = {
         id: cred.user.uid,
         username: data.username,
@@ -207,7 +211,10 @@ export const api = {
     try {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
       if (!cred.user.emailVerified) {
-        await sendEmailVerification(cred.user);
+        const sendCustomVerificationEmail = httpsCallable(functions, 'sendCustomVerificationEmail');
+        const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
+        const displayName = userDoc.exists() ? userDoc.data().username : 'User';
+        await sendCustomVerificationEmail({ email: data.email, displayName });
         await signOut(auth);
         return mockResponse({ success: true });
       }
@@ -220,7 +227,13 @@ export const api = {
 
   resetPassword: async (email: string) => {
     try {
-      await sendPasswordResetEmail(auth, email);
+      const q = query(collection(db, 'users'), where('email', '==', email));
+      const snap = await getDocs(q);
+      const displayName = !snap.empty ? snap.docs[0].data().username : 'FitTrack User';
+
+      const sendCustomPasswordResetEmail = httpsCallable(functions, 'sendCustomPasswordResetEmail');
+      await sendCustomPasswordResetEmail({ email, displayName });
+
       return mockResponse({ success: true });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Failed to send reset email.' }, false, 400);

@@ -6,7 +6,7 @@ import { api, type UserProfile } from '../api';
 interface AdminViewProps {
   user: UserProfile;
   setView: (view: any) => void;
-  showToast: (message: string, type: 'success' | 'error') => void;
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export function AdminView({ user, setView, showToast }: AdminViewProps) {

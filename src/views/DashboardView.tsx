@@ -6,6 +6,7 @@ import {
 import { Plus, Target, Trophy, Flame, Search, Filter, Pencil, Trash2, Clock, Activity, X, Award, Star, Medal } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { type UserProfile, type ActivityLog, type DailyStat, type WeeklyGoal, type Achievement, type WeightLog } from '../api';
+import { motion } from 'motion/react';
 
 interface DashboardViewProps {
   user: UserProfile;
@@ -63,10 +64,26 @@ export const DashboardView = ({
   const indexOfFirstLog = indexOfLastLog - logsPerPage;
   const currentLogs = filteredLogs.slice(indexOfFirstLog, indexOfLastLog);
 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial="hidden"
+      animate="show"
+      variants={{
+        hidden: { opacity: 0 },
+        show: {
+          opacity: 1,
+          transition: { staggerChildren: 0.1 }
+        }
+      }}
+    >
       {/* Welcome & Weekly Goal */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="md:col-span-3 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-none">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -95,11 +112,12 @@ export const DashboardView = ({
             </div>
           </div>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Recharts Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <motion.div variants={itemVariants} className="h-full">
+          <Card className="h-full">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold flex items-center gap-2"><Flame className="text-orange-500" /> Activity</h3>
             <select 
@@ -113,7 +131,7 @@ export const DashboardView = ({
           </div>
           <div className="h-64 w-full min-h-[16rem]">
             {isMounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <ResponsiveContainer width="99%" height="100%" minWidth={0}>
                 <BarChart data={stats}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
@@ -143,14 +161,16 @@ export const DashboardView = ({
               </ResponsiveContainer>
             )}
           </div>
-        </Card>
+          </Card>
+        </motion.div>
 
-        <Card>
+        <motion.div variants={itemVariants} className="h-full">
+          <Card className="h-full">
           <h3 className="font-bold flex items-center gap-2 mb-6"><Target className="text-blue-500" /> Weight Progress</h3>
           <div className="h-64 w-full min-h-[16rem]">
             {weightLogs.length > 0 ? (
               isMounted && (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
                   <LineChart data={weightLogs}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
@@ -195,11 +215,13 @@ export const DashboardView = ({
               </div>
             )}
           </div>
-        </Card>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Activity Logs Table */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h2 className="text-lg font-bold">Recent Logs</h2>
           <div className="flex flex-wrap items-center gap-3">
@@ -248,9 +270,11 @@ export const DashboardView = ({
             <div className="flex gap-2"><Button variant="outline" onClick={() => setLogsPage(p => Math.max(1, p - 1))} disabled={logsPage === 1} className="px-3 py-1.5 text-sm">Previous</Button><Button variant="outline" onClick={() => setLogsPage(p => Math.min(totalPages, p + 1))} disabled={logsPage >= totalPages} className="px-3 py-1.5 text-sm">Next</Button></div>
           </div>
         )}
-      </Card>
+        </Card>
+      </motion.div>
 
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold flex items-center gap-2"><Trophy className="text-amber-500" /> Achievements</h2>
           <Button variant="outline" className="px-3 py-1.5 text-sm" onClick={() => setView('achievements')}>View All</Button>
@@ -267,7 +291,8 @@ export const DashboardView = ({
             ))}
           </div>
         )}
-      </Card>
-    </div>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 };
