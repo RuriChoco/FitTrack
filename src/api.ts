@@ -55,7 +55,6 @@ import { getAnalytics } from 'firebase/analytics';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, deleteUser as deleteAuthUser, GoogleAuthProvider, signInWithPopup, connectAuthEmulator, sendEmailVerification, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, getCountFromServer, enableIndexedDbPersistence, writeBatch, serverTimestamp, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, connectStorageEmulator, deleteObject } from 'firebase/storage';
-import { evaluateAchievements } from './data/achievements';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -66,11 +65,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
-
-if (!firebaseConfig.projectId && !import.meta.env.DEV) {
-  console.error('FIREBASE FATAL ERROR: VITE_FIREBASE_PROJECT_ID is missing. ' +
-    'Check your GitHub Secrets or environment variables.');
-}
 
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
@@ -103,79 +97,17 @@ const mockResponse = (data?: any, ok = true, status = 200) => ({
 });
 
 const SEED_EXERCISES: Exercise[] = [
-  // Beginner - Cardio
-  { id: '1',  name: 'Brisk Walking',           category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '4',  name: 'Chair Aerobics',           category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '12', name: 'Slow Jogging',             category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '13', name: 'Jump Rope',                category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '14', name: 'Cycling (Leisure)',        category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '15', name: 'Water Aerobics',           category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '38', name: 'Toe Taps',                 category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '39', name: 'Aquatic Walking',          category: 'Cardio',       difficulty: 'Beginner' },
-  { id: '40', name: 'Hula Hooping',             category: 'Cardio',       difficulty: 'Beginner' },
-  // Beginner - Flexibility and Balance
-  { id: '2',  name: 'Gentle Yoga',              category: 'Flexibility',  difficulty: 'Beginner' },
-  { id: '6',  name: 'Tai Chi',                  category: 'Balance',      difficulty: 'Beginner' },
-  { id: '8',  name: 'Stretching Routine',       category: 'Flexibility',  difficulty: 'Beginner' },
-  { id: '16', name: 'Foam Rolling',             category: 'Flexibility',  difficulty: 'Beginner' },
-  { id: '17', name: 'Balance Board',            category: 'Balance',      difficulty: 'Beginner' },
-  { id: '41', name: 'Light Stretching',         category: 'Flexibility',  difficulty: 'Beginner' },
-  { id: '42', name: 'Arm Circles',              category: 'Flexibility',  difficulty: 'Beginner' },
-  { id: '43', name: 'Standing Desk Exercises',  category: 'Flexibility',  difficulty: 'Beginner' },
-  // Beginner - Strength
-  { id: '18', name: 'Wall Push-Ups',            category: 'Strength',     difficulty: 'Beginner' },
-  { id: '19', name: 'Seated Leg Raises',        category: 'Strength',     difficulty: 'Beginner' },
-  { id: '20', name: 'Glute Bridges',            category: 'Strength',     difficulty: 'Beginner' },
-  { id: '44', name: 'Wall Sits',                category: 'Strength',     difficulty: 'Beginner' },
-  { id: '45', name: 'Heel Raises',              category: 'Strength',     difficulty: 'Beginner' },
-  // Intermediate - Cardio
-  { id: '3',  name: 'Swimming',                 category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '9',  name: 'Dancing',                  category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '21', name: 'Rowing Machine',           category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '22', name: 'Stair Climbing',           category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '23', name: 'Cycling (Moderate)',       category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '24', name: 'Running',                  category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '46', name: 'Zumba',                    category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '47', name: 'Elliptical Machine',       category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '48', name: 'Shadow Boxing',            category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '49', name: 'Kickboxing Basics',        category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '50', name: 'Step Aerobics',            category: 'Cardio',       difficulty: 'Intermediate' },
-  { id: '56', name: 'Piloxing',                 category: 'Cardio',       difficulty: 'Intermediate' },
-  // Intermediate - Strength
-  { id: '5',  name: 'Resistance Band Training', category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '7',  name: 'Bodyweight Squats',        category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '10', name: 'Pilates',                  category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '25', name: 'Dumbbell Rows',            category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '26', name: 'Lunges',                   category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '27', name: 'Push-Ups',                 category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '28', name: 'Plank Hold',               category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '51', name: 'Kettlebell Swings',        category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '52', name: 'TRX Basics',               category: 'Strength',     difficulty: 'Intermediate' },
-  { id: '53', name: 'Core Crunch Circuit',      category: 'Strength',     difficulty: 'Intermediate' },
-  // Intermediate - HIIT and Sports
-  { id: '29', name: 'HIIT Circuit',             category: 'HIIT',         difficulty: 'Intermediate' },
-  { id: '30', name: 'Basketball',               category: 'Sports',       difficulty: 'Intermediate' },
-  { id: '31', name: 'Tennis / Badminton',       category: 'Sports',       difficulty: 'Intermediate' },
-  { id: '54', name: 'Burpees',                  category: 'HIIT',         difficulty: 'Intermediate' },
-  { id: '55', name: 'Mountain Climbers',        category: 'HIIT',         difficulty: 'Intermediate' },
-  // Advanced
-  { id: '11', name: 'Heavy Lifting',            category: 'Strength',     difficulty: 'Advanced' },
-  { id: '32', name: 'Sprinting Intervals',      category: 'Cardio',       difficulty: 'Advanced' },
-  { id: '33', name: 'CrossFit WOD',             category: 'HIIT',         difficulty: 'Advanced' },
-  { id: '34', name: 'Olympic Weightlifting',    category: 'Strength',     difficulty: 'Advanced' },
-  { id: '35', name: 'Triathlon Training',       category: 'Cardio',       difficulty: 'Advanced' },
-  { id: '36', name: 'Rock Climbing',            category: 'Sports',       difficulty: 'Advanced' },
-  { id: '37', name: 'Advanced Yoga (Ashtanga)', category: 'Flexibility',  difficulty: 'Advanced' },
-  { id: '57', name: 'Muscle-Ups',               category: 'Strength',     difficulty: 'Advanced' },
-  { id: '58', name: 'Powerlifting',             category: 'Strength',     difficulty: 'Advanced' },
-  { id: '59', name: 'Ironman Training',         category: 'Cardio',       difficulty: 'Advanced' },
-  { id: '60', name: 'Advanced Calisthenics',    category: 'Strength',     difficulty: 'Advanced' },
-  { id: '61', name: 'Bouldering',               category: 'Sports',       difficulty: 'Advanced' },
-  { id: '62', name: 'Plyometric Push-ups',      category: 'Strength',     difficulty: 'Advanced' },
-  { id: '63', name: 'Handstand Push-ups',       category: 'Strength',     difficulty: 'Advanced' },
-  { id: '64', name: 'Sled Pushes',              category: 'Strength',     difficulty: 'Advanced' },
-  { id: '65', name: 'Battle Ropes',             category: 'Strength',     difficulty: 'Advanced' },
-  { id: '66', name: 'Parkour',                  category: 'Sports',       difficulty: 'Advanced' }
+  { id: '1', name: 'Brisk Walking', category: 'Cardio', difficulty: 'Beginner' },
+  { id: '2', name: 'Gentle Yoga', category: 'Flexibility', difficulty: 'Beginner' },
+  { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '4', name: 'Chair Aerobics', category: 'Cardio', difficulty: 'Beginner' },
+  { id: '5', name: 'Resistance Band Training', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '6', name: 'Tai Chi', category: 'Balance', difficulty: 'Beginner' },
+  { id: '7', name: 'Bodyweight Squats', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '8', name: 'Stretching Routine', category: 'Flexibility', difficulty: 'Beginner' },
+  { id: '9', name: 'Dancing', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '10', name: 'Pilates', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '11', name: 'Heavy Lifting', category: 'Strength', difficulty: 'Advanced' },
 ];
 
 export const api = {
@@ -254,23 +186,23 @@ export const api = {
       return mockResponse({ error: e.message || 'Signup failed' }, false, 400);
     }
   },
-    
+
   login: async (data: any) => {
     try {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
-      
+
       if (!cred.user.emailVerified) {
         await signOut(auth);
         return mockResponse({ error: 'Please verify your email address before logging in.', needsVerification: true }, false, 403);
       }
-      
+
       const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
       return mockResponse({ user: userDoc.data(), token: 'firebase-token' });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Login failed' }, false, 401);
     }
   },
-    
+
   resendVerification: async (data: any) => {
     try {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
@@ -294,13 +226,13 @@ export const api = {
       return mockResponse({ error: e.message || 'Failed to send reset email.' }, false, 400);
     }
   },
-    
+
   loginWithGoogle: async () => {
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       const userRef = doc(db, 'users', cred.user.uid);
       const userSnap = await getDoc(userRef);
-      
+
       let userDoc;
       if (userSnap.exists()) {
         userDoc = userSnap.data();
@@ -326,7 +258,7 @@ export const api = {
       return mockResponse({ error: e.message || 'Google Sign-In failed' }, false, 401);
     }
   },
-    
+
   updateProfile: async (data: any) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
@@ -351,7 +283,7 @@ export const api = {
       return mockResponse({ error: e.message || 'Update failed' }, false, 500);
     }
   },
-    
+
   deleteProfile: async () => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
@@ -365,7 +297,7 @@ export const api = {
       return mockResponse({ error: 'Delete failed' }, false, 500);
     }
   },
-    
+
   getMe: async () => {
     try {
       await auth.authStateReady();
@@ -387,7 +319,7 @@ export const api = {
       return mockResponse({ count: 0 }, false, 500);
     }
   },
-  
+
   getAllUsers: async () => {
     try {
       const snap = await getDocs(collection(db, 'users'));
@@ -397,7 +329,7 @@ export const api = {
       return mockResponse([], false, 500);
     }
   },
-  
+
   getWeightLogs: async (userId: string) => {
     try {
       const snap = await getDocs(query(collection(db, 'weight_logs'), where('user_id', '==', userId)));
@@ -407,7 +339,7 @@ export const api = {
       return mockResponse([], false, 500);
     }
   },
-  
+
   getRecommendations: async (age: number, gender: string, goal_type?: string) => {
     let recs = [...SEED_EXERCISES];
     if (goal_type === 'lose_weight') {
@@ -415,12 +347,9 @@ export const api = {
     } else if (goal_type === 'build_muscle') {
       recs = recs.filter(e => e.category === 'Strength');
     }
-    
-    // Shuffle the recommendations and display up to 12 at a time
-    const shuffled = recs.sort(() => 0.5 - Math.random());
-    return mockResponse(shuffled.slice(0, 12));
+    return mockResponse(recs.slice(0, 5));
   },
-  
+
   getLogs: async (userId: string) => {
     try {
       const snap = await getDocs(query(collection(db, 'activity_logs'), where('user_id', '==', userId)));
@@ -430,49 +359,55 @@ export const api = {
       return mockResponse([], false, 500);
     }
   },
-  
+
   getStats: async (logs: ActivityLog[], range: 'week' | 'month' = 'week') => {
     try {
       const days = range === 'month' ? 30 : 7;
       const d = new Date(); d.setDate(d.getDate() - days);
       const dateStr = d.toISOString().split('T')[0];
-      
+
       const statsMap: Record<string, number> = {};
-      
+
       logs.forEach(data => {
         if (data.date >= dateStr) {
           statsMap[data.date] = (statsMap[data.date] || 0) + data.duration;
         }
       });
-      
+
       const stats = Object.keys(statsMap).sort().map(date => ({ date, total_duration: statsMap[date] }));
       return mockResponse(stats);
     } catch (e) {
       return mockResponse([], false, 500);
     }
   },
-  
+
   getGoals: async (logs: ActivityLog[], targetGoal: number) => {
     try {
       const d = new Date(); d.setDate(d.getDate() - 7);
       const dateStr = d.toISOString().split('T')[0];
-      
+
       const currentTotal = logs.reduce((sum, doc) => doc.date >= dateStr ? sum + doc.duration : sum, 0);
-      
+
       return mockResponse({ current_weekly_total: currentTotal, target_goal: targetGoal });
     } catch (e) {
       return mockResponse({ current_weekly_total: 0, target_goal: targetGoal });
     }
   },
-  
+
   getAchievements: async (logs: ActivityLog[]) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
       const uid = auth.currentUser.uid;
 
-      const ach = evaluateAchievements(logs);
+      const count = logs.length;
+      const dur = logs.reduce((sum, doc) => sum + doc.duration, 0);
+      const ach: Achievement[] = [];
 
-      
+      if (count >= 1) ach.push({ id: 'first_step', name: 'First Step', description: 'Logged your first activity', icon: 'Star' });
+      if (count >= 5) ach.push({ id: 'getting_serious', name: 'Getting Serious', description: 'Logged 5 total activities', icon: 'Medal' });
+      if (dur >= 100) ach.push({ id: 'century_club', name: 'Century Club', description: 'Reached 100 active minutes', icon: 'Award' });
+      if (dur >= 500) ach.push({ id: 'marathoner', name: 'Marathoner', description: 'Reached 500 active minutes', icon: 'Trophy' });
+
       // Check against Firestore to see which badges are already saved
       const earnedSnap = await getDocs(collection(db, `users/${uid}/earned_badges`));
       const earnedIds = new Set(earnedSnap.docs.map(d => d.id));
@@ -488,46 +423,46 @@ export const api = {
         }
         await batch.commit();
       }
-      
+
       return mockResponse(ach);
     } catch (e) { return mockResponse([]); }
   },
-  
+
   logActivity: async (data: any) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
-      
+
       const batch = writeBatch(db);
       const newLogRef = doc(collection(db, 'activity_logs'));
       const userRef = doc(db, 'users', auth.currentUser.uid);
-      
+
       batch.set(newLogRef, data);
       batch.update(userRef, { last_logged_at: serverTimestamp() });
       await batch.commit();
-      
+
       return mockResponse({ success: true });
     } catch (e) { return mockResponse({ error: 'Failed' }, false, 500); }
   },
-    
+
   logWeight: async (weight: number) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
       const dateStr = new Date().toISOString().split('T')[0];
-      
+
       const batch = writeBatch(db);
       const userRef = doc(db, 'users', auth.currentUser.uid);
       batch.update(userRef, { weight });
 
       const q = query(collection(db, 'weight_logs'), where('user_id', '==', auth.currentUser.uid), where('date', '==', dateStr));
       const snap = await getDocs(q);
-      
+
       if (!snap.empty) {
         batch.update(snap.docs[0].ref, { weight });
       } else {
         const newLogRef = doc(collection(db, 'weight_logs'));
         batch.set(newLogRef, { user_id: auth.currentUser.uid, weight, date: dateStr });
       }
-      
+
       await batch.commit();
       return mockResponse({ success: true });
     } catch (e) { return mockResponse({ error: 'Failed' }, false, 500); }
@@ -539,7 +474,7 @@ export const api = {
       return mockResponse({ success: true });
     } catch (e) { return mockResponse({ error: 'Failed' }, false, 500); }
   },
-    
+
   deleteLog: async (logId: string) => {
     try {
       await deleteDoc(doc(db, 'activity_logs', logId));
