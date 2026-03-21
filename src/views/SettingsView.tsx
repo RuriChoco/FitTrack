@@ -258,7 +258,7 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
                       editAvatar === customAvatarSource ? "border-emerald-500 shadow-md scale-110" : "border-transparent opacity-50 hover:opacity-100 hover:scale-105"
                     )}
                   >
-                    <img src={customAvatarSource} alt="Custom avatar" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
+                  <img src={customAvatarSource} alt="Custom avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
                   </button>
                 )}
                 {PREDEFINED_AVATARS.map(url => (
@@ -271,7 +271,7 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
                       editAvatar === url ? "border-emerald-500 shadow-md scale-110" : "border-transparent opacity-50 hover:opacity-100 hover:scale-105"
                     )}
                   >
-                    <img src={url} alt="Avatar option" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
+                  <img src={url} alt="Avatar option" referrerPolicy="no-referrer" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
                   </button>
                 ))}
               </div>

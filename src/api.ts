@@ -244,6 +244,11 @@ export const api = {
       let userDoc;
       if (userSnap.exists()) {
         userDoc = userSnap.data();
+        // Update avatar to Google PFP if they don't have one set yet
+        if (!userDoc.avatar && cred.user.photoURL) {
+          userDoc.avatar = cred.user.photoURL;
+          await updateDoc(userRef, { avatar: cred.user.photoURL });
+        }
       } else {
         userDoc = {
           id: cred.user.uid,
