@@ -42,6 +42,7 @@ export default function App() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isOnboardingSaving, setIsOnboardingSaving] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   
   const [logModal, setLogModal] = useState<{ exercise: string; open: boolean }>({ exercise: '', open: false });
   const [editModal, setEditModal] = useState<{ log: ActivityLog | null; open: boolean }>({ log: null, open: false });
@@ -136,6 +137,24 @@ export default function App() {
       setShowOnboarding(false);
     }
   }, [user]);
+
+  // Poll for email verification if unverified
+  useEffect(() => {
+    if (user?.emailVerified !== false) return;
+
+    const intervalId = setInterval(async () => {
+      const res = await api.checkEmailVerification();
+      if (res.ok) {
+        const data = await res.json();
+        if (data.emailVerified) {
+          setUser(prev => prev ? { ...prev, emailVerified: true } : null);
+          showToast('Email verified successfully! Thank you.', 'success');
+        }
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [user?.emailVerified, showToast]);
 
   const isAnyModalOpen = showOnboarding || logModal.open || editModal.open || logWeightModal || confirmDialog !== null;
 
@@ -302,6 +321,30 @@ export default function App() {
             <option key={i} value={ex} />
           ))}
         </datalist>
+
+        {user && user.emailVerified === false && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-xl border border-amber-100 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between transition-colors shadow-sm gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xl" role="img" aria-label="warning">⚠️</span>
+              <span className="font-medium text-sm">Please verify your email address. Some features may be limited until verified.</span>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                setIsResendingVerification(true);
+                const res = await api.resendVerification();
+                if (res.ok) showToast('Verification email resent! Check your inbox.', 'success');
+                else { const err = await res.json(); showToast(err.error || 'Failed to resend verification email.', 'error'); }
+                setIsResendingVerification(false);
+              }}
+              disabled={isResendingVerification}
+              className="whitespace-nowrap text-xs py-1.5 h-auto bg-amber-100/50 hover:bg-amber-200/50 dark:bg-amber-900/50 dark:hover:bg-amber-800/50 border-amber-200 dark:border-amber-700 text-amber-900 dark:text-amber-100 w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              {isResendingVerification && <Loader2 size={14} className="animate-spin" />}
+              {isResendingVerification ? 'Sending...' : 'Resend Email'}
+            </Button>
+          </div>
+        )}
 
         {user && announcement && announcement.message && announcement.date !== dismissedDate && (
           <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 px-4 py-3 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center justify-between transition-colors shadow-sm">

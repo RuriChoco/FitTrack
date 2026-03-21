@@ -11,6 +11,7 @@ export interface UserProfile {
   target_weight?: number;
   weight_unit?: string;
   goal_type?: string;
+  emailVerified?: boolean;
 }
 
 export interface Exercise {
@@ -186,9 +187,7 @@ export const api = {
       } catch (emailErr) {
         console.error("Failed to send verification email:", emailErr);
       }
-      // Sign them out immediately so they are forced to verify and log in
-      await signOut(auth);
-      return mockResponse({ success: true });
+      return mockResponse({ user: { ...userDoc, emailVerified: false }, token: 'firebase-token' });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Signup failed' }, false, 400);
     }
@@ -198,37 +197,33 @@ export const api = {
     try {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
 
-      if (!cred.user.emailVerified) {
-        await signOut(auth);
-        return mockResponse({ error: 'Please verify your email address before logging in.', needsVerification: true }, false, 403);
-      }
-
       const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-      return mockResponse({ user: userDoc.data(), token: 'firebase-token' });
+      return mockResponse({ user: { ...userDoc.data(), emailVerified: cred.user.emailVerified }, token: 'firebase-token' });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Login failed' }, false, 401);
     }
   },
 
-  resendVerification: async (data: any) => {
+  resendVerification: async () => {
     try {
-      const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
-      if (!cred.user.emailVerified) {
-        try {
-          await sendEmailVerification(cred.user);
-        } catch (emailErr) {
-          console.error("Failed to send verification email:", emailErr);
-          await signOut(auth);
-          return mockResponse({ error: 'Failed to send verification email.' }, false, 500);
-        }
-        await signOut(auth);
+      if (auth.currentUser && !auth.currentUser.emailVerified) {
+        await sendEmailVerification(auth.currentUser);
         return mockResponse({ success: true });
       }
-      await signOut(auth);
-      return mockResponse({ error: 'Email is already verified. You can log in.' }, false, 400);
+      return mockResponse({ error: 'User already verified or not logged in.' }, false, 400);
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Failed to resend verification email.' }, false, 400);
     }
+  },
+
+  checkEmailVerification: async () => {
+    try {
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        return mockResponse({ emailVerified: auth.currentUser.emailVerified });
+      }
+      return mockResponse({ error: 'Not auth' }, false, 401);
+    } catch (e: any) { return mockResponse({ error: e.message }, false, 500); }
   },
 
   resetPassword: async (email: string) => {
@@ -316,7 +311,7 @@ export const api = {
       await auth.authStateReady();
       if (auth.currentUser) {
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        return mockResponse(userDoc.data());
+        return mockResponse({ ...userDoc.data(), emailVerified: auth.currentUser.emailVerified });
       }
       return mockResponse({ error: 'Not auth' }, false, 401);
     } catch (e) {

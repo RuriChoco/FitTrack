@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button } from '../ui';
 import { api, type UserProfile } from '../api';
-import { Moon, Sun, Eye, EyeOff, Activity, Mail, Loader2 } from 'lucide-react';
+import { Moon, Sun, Eye, EyeOff, Activity, Loader2 } from 'lucide-react';
 import { cn, getPasswordStrength } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -22,8 +22,6 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
   const [gender, setGender] = useState('male');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
@@ -58,18 +56,6 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
     setIsResetting(false);
   };
 
-  const handleResendVerification = async () => {
-    setIsResending(true);
-    const res = await api.resendVerification({ email, password });
-    if (res.ok) {
-      showToast('Verification email resent! Please check your inbox.', 'success');
-    } else {
-      const err = await res.json();
-      showToast(err.error || 'Failed to resend verification email', 'error');
-    }
-    setIsResending(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -84,9 +70,6 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
         onLoginSuccess(data.user, data.token);
       } else {
         const err = await res.json();
-        if (err.needsVerification) {
-          setNeedsVerification(true);
-        }
         showToast(err.error || 'Login failed', 'error');
       }
     } else {
@@ -102,9 +85,9 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
       }
       const res = await api.signup({ email, password, username, age: parseInt(age) || 30, gender });
       if (res.ok) {
-        showToast('Signup successful! Please check your email to verify your account.', 'success');
-        setIsLogin(true);
-        setNeedsVerification(true);
+        const data = await res.json();
+        onLoginSuccess(data.user, data.token);
+        showToast('Welcome! Please check your email to verify your account.', 'success');
       } else {
         const err = await res.json();
         showToast(err.error || 'Signup failed', 'error');
@@ -145,28 +128,6 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
           </h2>
         </div>
 
-        {needsVerification ? (
-          <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300">
-            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-4 rounded-full inline-block text-emerald-600 dark:text-emerald-400 mb-2">
-              <Mail size={48} />
-            </div>
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Verify your email</h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              We've sent a verification link to <span className="font-semibold text-zinc-900 dark:text-zinc-100">{email}</span>. 
-              Please verify your email address to continue.
-            </p>
-            <div className="pt-4 space-y-3">
-              <Button onClick={handleResendVerification} disabled={isResending} className="w-full flex items-center justify-center gap-2">
-                {isResending && <Loader2 size={16} className="animate-spin" />}
-                {isResending ? 'Sending...' : 'Resend Email'}
-              </Button>
-              <Button variant="outline" onClick={() => setNeedsVerification(false)} className="w-full">
-                Back to Login
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <>
         <form onSubmit={handleSubmit} className="space-y-4 text-zinc-900 dark:text-zinc-100">
           {!isLogin && (
             <>
@@ -338,8 +299,6 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
             {isLogin ? 'Sign up' : 'Log in'}
           </button>
         </p>
-          </>
-        )}
       </Card>
 
       <AnimatePresence>
