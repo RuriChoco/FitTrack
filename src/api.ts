@@ -5,6 +5,7 @@ export interface UserProfile {
   age: number;
   gender: string;
   avatar?: string;
+  google_avatar?: string;
   weekly_goal: number;
   is_admin?: boolean;
   weight?: number;
@@ -198,7 +199,12 @@ export const api = {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
 
       const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-      return mockResponse({ user: { ...userDoc.data(), emailVerified: cred.user.emailVerified }, token: 'firebase-token' });
+      const userData = userDoc.data();
+      if (cred.user.photoURL && userData && userData.google_avatar !== cred.user.photoURL) {
+        await updateDoc(doc(db, 'users', cred.user.uid), { google_avatar: cred.user.photoURL });
+        userData.google_avatar = cred.user.photoURL;
+      }
+      return mockResponse({ user: { ...userData, emailVerified: cred.user.emailVerified }, token: 'firebase-token' });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Login failed' }, false, 401);
     }
@@ -249,6 +255,10 @@ export const api = {
           userDoc.avatar = cred.user.photoURL;
           await updateDoc(userRef, { avatar: cred.user.photoURL });
         }
+        if (cred.user.photoURL && userDoc.google_avatar !== cred.user.photoURL) {
+          userDoc.google_avatar = cred.user.photoURL;
+          await updateDoc(userRef, { google_avatar: cred.user.photoURL });
+        }
       } else {
         userDoc = {
           id: cred.user.uid,
@@ -257,6 +267,7 @@ export const api = {
           age: 30, // Default age
           gender: 'other',
           avatar: cred.user.photoURL || null,
+          google_avatar: cred.user.photoURL || null,
           weekly_goal: 150,
           is_admin: false,
           weight: null,
@@ -316,7 +327,12 @@ export const api = {
       await auth.authStateReady();
       if (auth.currentUser) {
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        return mockResponse({ ...userDoc.data(), emailVerified: auth.currentUser.emailVerified });
+        const data = userDoc.data();
+        if (auth.currentUser.photoURL && data && data.google_avatar !== auth.currentUser.photoURL) {
+          await updateDoc(doc(db, 'users', auth.currentUser.uid), { google_avatar: auth.currentUser.photoURL });
+          data.google_avatar = auth.currentUser.photoURL;
+        }
+        return mockResponse({ ...data, emailVerified: auth.currentUser.emailVerified });
       }
       return mockResponse({ error: 'Not auth' }, false, 401);
     } catch (e) {

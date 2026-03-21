@@ -44,9 +44,12 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const customAvatarSource = !PREDEFINED_AVATARS.includes(editAvatar) 
+  const isPredefined = PREDEFINED_AVATARS.includes(editAvatar);
+  const isGoogle = !!user.google_avatar && editAvatar === user.google_avatar;
+
+  const customAvatarSource = (!isPredefined && !isGoogle) 
     ? editAvatar 
-    : (user.avatar && !PREDEFINED_AVATARS.includes(user.avatar) ? user.avatar : null);
+    : (user.avatar && !PREDEFINED_AVATARS.includes(user.avatar) && user.avatar !== user.google_avatar ? user.avatar : null);
 
   const handleDeleteAccount = () => {
     setConfirmDialog({
@@ -259,6 +262,19 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
                     )}
                   >
                   <img src={customAvatarSource} alt="Custom avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
+                  </button>
+                )}
+                {user.google_avatar && (
+                  <button
+                    type="button"
+                    onClick={() => setEditAvatar(user.google_avatar || '')}
+                    className={cn(
+                      "w-12 h-12 rounded-full overflow-hidden border-2 transition-all",
+                      editAvatar === user.google_avatar ? "border-emerald-500 shadow-md scale-110" : "border-transparent opacity-50 hover:opacity-100 hover:scale-105"
+                    )}
+                    title="Google Profile Picture"
+                  >
+                  <img src={user.google_avatar} alt="Google avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover bg-emerald-50 dark:bg-emerald-900/30" />
                   </button>
                 )}
                 {PREDEFINED_AVATARS.map(url => (
