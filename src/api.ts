@@ -181,6 +181,11 @@ export const api = {
         goal_type: data.goal_type || 'maintain'
       };
       await setDoc(doc(db, 'users', cred.user.uid), userDoc);
+      try {
+        await sendEmailVerification(cred.user);
+      } catch (emailErr) {
+        console.error("Failed to send verification email:", emailErr);
+      }
       // Sign them out immediately so they are forced to verify and log in
       await signOut(auth);
       return mockResponse({ success: true });
@@ -209,16 +214,12 @@ export const api = {
     try {
       const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
       if (!cred.user.emailVerified) {
-        const sendCustomVerificationEmail = httpsCallable(functions, 'sendCustomVerificationEmail');
-        const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-        const displayName = userDoc.exists() ? userDoc.data().username : 'User';
-        
         try {
-          await sendCustomVerificationEmail({ email: data.email, displayName });
+          await sendEmailVerification(cred.user);
         } catch (emailErr) {
           console.error("Failed to send verification email:", emailErr);
           await signOut(auth);
-          return mockResponse({ error: 'Failed to send verification email. Please check your cloud function permissions.' }, false, 500);
+          return mockResponse({ error: 'Failed to send verification email.' }, false, 500);
         }
         await signOut(auth);
         return mockResponse({ success: true });
@@ -232,13 +233,7 @@ export const api = {
 
   resetPassword: async (email: string) => {
     try {
-      const q = query(collection(db, 'users'), where('email', '==', email));
-      const snap = await getDocs(q);
-      const displayName = !snap.empty ? snap.docs[0].data().username : 'FitTrack User';
-
-      const sendCustomPasswordResetEmail = httpsCallable(functions, 'sendCustomPasswordResetEmail');
-      await sendCustomPasswordResetEmail({ email, displayName });
-
+      await sendPasswordResetEmail(auth, email);
       return mockResponse({ success: true });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Failed to send reset email.' }, false, 400);
