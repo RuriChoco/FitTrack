@@ -53,13 +53,42 @@ export const getPasswordStrength = (pass: string) => {
 
   if (pass.length < 6) score = 1;
 
-  switch (score) {
-    case 1: return { score: 1, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-500' };
-    case 2: return { score: 2, label: 'Fair', color: 'bg-amber-500', textColor: 'text-amber-500' };
-    case 3: return { score: 3, label: 'Good', color: 'bg-blue-500', textColor: 'text-blue-500' };
-    case 4: return { score: 4, label: 'Strong', color: 'bg-emerald-500', textColor: 'text-emerald-500' };
-    default: return { score: 1, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-500' };
+  return score >= 4 ? { score: 4, label: 'Strong', color: 'bg-emerald-500', textColor: 'text-emerald-500' } : 
+         score === 3 ? { score: 3, label: 'Good', color: 'bg-blue-500', textColor: 'text-blue-500' } :
+         score === 2 ? { score: 2, label: 'Fair', color: 'bg-amber-500', textColor: 'text-amber-500' } :
+                       { score: 1, label: 'Weak', color: 'bg-red-500', textColor: 'text-red-500' };
+};
+
+export const calculateBMI = (weight: number | undefined, weightUnit: string | undefined, height: number | undefined, heightUnit: string | undefined): number | null => {
+  if (!weight || !height || height <= 0 || weight <= 0) return null;
+  
+  // Default to imperial if undefined (matches UI defaults and historical data)
+  const wUnit = weightUnit || 'lbs';
+  const hUnit = heightUnit || 'in';
+
+  let wKg = weight;
+  let hMeters = height / 100; // assume cm -> meters initially
+
+  if (wUnit === 'lbs') {
+    wKg = weight * 0.45359237; // Exact lbs to kg conversion
   }
+  
+  if (hUnit === 'in') {
+    hMeters = height * 0.0254; // Exact inches to meters conversion
+  }
+  
+  if (hMeters === 0) return null;
+  
+  const bmi = wKg / (hMeters * hMeters);
+  return Math.round(bmi * 10) / 10;
+};
+
+export const getBMICategory = (bmi: number | null) => {
+  if (!bmi) return { label: 'Unknown', color: 'text-zinc-500' };
+  if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-500' };
+  if (bmi < 25) return { label: 'Healthy Weight', color: 'text-emerald-500' };
+  if (bmi < 30) return { label: 'Overweight', color: 'text-amber-500' };
+  return { label: 'Obese', color: 'text-red-500' };
 };
 
 export const PREDEFINED_AVATARS = [

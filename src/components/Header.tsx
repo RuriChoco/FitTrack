@@ -27,7 +27,7 @@ export function Header({ user, streak, isDark, toggleTheme, setView, handleLogou
   }, []);
 
   return (
-    <header className="bg-white dark:bg-zinc-900 border-b border-black/5 dark:border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 z-10 transition-colors">
+    <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 z-10 transition-colors">
       <div className="flex items-center gap-2 text-emerald-600 font-bold text-xl">
         <Activity size={24} />
         <span>FitTrack</span>

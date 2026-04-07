@@ -11,6 +11,8 @@ export interface UserProfile {
   weight?: number;
   target_weight?: number;
   weight_unit?: string;
+  height?: number;
+  height_unit?: string;
   goal_type?: string;
   emailVerified?: boolean;
 }
@@ -102,17 +104,48 @@ const mockResponse = (data?: any, ok = true, status = 200) => ({
 });
 
 const SEED_EXERCISES: Exercise[] = [
+  // Beginner
   { id: '1', name: 'Brisk Walking', category: 'Cardio', difficulty: 'Beginner' },
   { id: '2', name: 'Gentle Yoga', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate' },
   { id: '4', name: 'Chair Aerobics', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '5', name: 'Resistance Band Training', category: 'Strength', difficulty: 'Intermediate' },
   { id: '6', name: 'Tai Chi', category: 'Balance', difficulty: 'Beginner' },
-  { id: '7', name: 'Bodyweight Squats', category: 'Strength', difficulty: 'Intermediate' },
   { id: '8', name: 'Stretching Routine', category: 'Flexibility', difficulty: 'Beginner' },
+  { id: '12', name: 'Slow Jogging', category: 'Cardio', difficulty: 'Beginner' },
+  { id: '13', name: 'Cycling (Leisure)', category: 'Cardio', difficulty: 'Beginner' },
+  { id: '14', name: 'Water Aerobics', category: 'Cardio', difficulty: 'Beginner' },
+  { id: '15', name: 'Foam Rolling', category: 'Flexibility', difficulty: 'Beginner' },
+  { id: '16', name: 'Wall Push-Ups', category: 'Strength', difficulty: 'Beginner' },
+  { id: '17', name: 'Seated Leg Raises', category: 'Strength', difficulty: 'Beginner' },
+  { id: '18', name: 'Glute Bridges', category: 'Strength', difficulty: 'Beginner' },
+
+  // Intermediate
+  { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '5', name: 'Resistance Band Training', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '7', name: 'Bodyweight Squats', category: 'Strength', difficulty: 'Intermediate' },
   { id: '9', name: 'Dancing', category: 'Cardio', difficulty: 'Intermediate' },
   { id: '10', name: 'Pilates', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '19', name: 'Jump Rope', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '20', name: 'Balance Board', category: 'Balance', difficulty: 'Intermediate' },
+  { id: '21', name: 'Rowing Machine', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '22', name: 'Stair Climbing', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '23', name: 'Cycling (Moderate)', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '24', name: 'Running', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '25', name: 'Dumbbell Rows', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '26', name: 'Lunges', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '27', name: 'Push-Ups', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '28', name: 'Plank Hold', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '29', name: 'Basketball', category: 'Sports', difficulty: 'Intermediate' },
+  { id: '30', name: 'Tennis / Badminton', category: 'Sports', difficulty: 'Intermediate' },
+
+  // Advanced
   { id: '11', name: 'Heavy Lifting', category: 'Strength', difficulty: 'Advanced' },
+  { id: '31', name: 'HIIT Circuit', category: 'HIIT', difficulty: 'Advanced' },
+  { id: '32', name: 'Sprinting Intervals', category: 'HIIT', difficulty: 'Advanced' },
+  { id: '33', name: 'CrossFit WOD', category: 'HIIT', difficulty: 'Advanced' },
+  { id: '34', name: 'Olympic Weightlifting', category: 'Strength', difficulty: 'Advanced' },
+  { id: '35', name: 'Triathlon Training', category: 'Cardio', difficulty: 'Advanced' },
+  { id: '36', name: 'Rock Climbing', category: 'Sports', difficulty: 'Advanced' },
+  { id: '37', name: 'Advanced Yoga (Ashtanga)', category: 'Flexibility', difficulty: 'Advanced' },
 ];
 
 export const api = {
@@ -180,6 +213,8 @@ export const api = {
         weight: data.weight || null,
         target_weight: data.target_weight || null,
         weight_unit: data.weight_unit || 'lbs',
+        height: data.height || null,
+        height_unit: data.height_unit || 'in',
         goal_type: data.goal_type || 'maintain'
       };
       await setDoc(doc(db, 'users', cred.user.uid), userDoc);
@@ -273,6 +308,8 @@ export const api = {
           weight: null,
           target_weight: null,
           weight_unit: 'lbs',
+          height: null,
+          height_unit: 'in',
           goal_type: 'maintain'
         };
         await setDoc(userRef, userDoc);
@@ -372,11 +409,12 @@ export const api = {
   getRecommendations: async (age: number, gender: string, goal_type?: string) => {
     let recs = [...SEED_EXERCISES];
     if (goal_type === 'lose_weight') {
-      recs = recs.filter(e => e.category === 'Cardio' || e.category === 'Flexibility');
+      recs = recs.filter(e => e.category === 'Cardio' || e.category === 'Flexibility' || e.category === 'HIIT');
     } else if (goal_type === 'build_muscle') {
-      recs = recs.filter(e => e.category === 'Strength');
+      recs = recs.filter(e => e.category === 'Strength' || e.category === 'HIIT');
     }
-    return mockResponse(recs.slice(0, 5));
+    // Return all matched recommendations, the user can use the filters in SuggestView
+    return mockResponse(recs);
   },
 
   getLogs: async (userId: string) => {

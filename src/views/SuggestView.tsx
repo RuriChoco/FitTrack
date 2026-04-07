@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, Button } from '../ui';
 import { Dumbbell, ChevronRight, Heart, Zap, Activity, Shield, Target } from 'lucide-react';
 import { type UserProfile, type Exercise } from '../api';
-import { cn } from '../utils';
+import { cn, calculateBMI, getBMICategory } from '../utils';
 
 interface SuggestViewProps {
   user: UserProfile;
@@ -87,11 +87,17 @@ export function SuggestView({ user, recommendations, setView, setLogModal }: Sug
         <div>
           <h2 className="text-2xl font-bold">Recommended for You</h2>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-            Based on your profile ({user.age}y, {user.gender}) &middot; {filtered.length} activities
+            Based on your profile ({user.age}y, {user.gender}) 
+            {calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit) && (
+              <> &middot; BMI: <span className={cn("font-bold", getBMICategory(calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)).color)}>{calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)}</span></>
+            )}
+            &middot; {filtered.length} activities
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select
+            id="suggestCategoryFilter"
+            name="categoryFilter"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"
@@ -99,6 +105,8 @@ export function SuggestView({ user, recommendations, setView, setLogModal }: Sug
             {categories.map(c => <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>)}
           </select>
           <select
+            id="suggestDifficultyFilter"
+            name="difficultyFilter"
             value={difficultyFilter}
             onChange={(e) => setDifficultyFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"

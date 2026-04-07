@@ -7,6 +7,7 @@ import { Plus, Target, Trophy, Flame, Search, Filter, Pencil, Trash2, Clock, Act
 import { Card, Button } from '../ui';
 import { type UserProfile, type ActivityLog, type DailyStat, type WeeklyGoal, type Achievement, type WeightLog } from '../api';
 import { motion } from 'motion/react';
+import { calculateBMI, getBMICategory, cn } from '../utils';
 
 interface DashboardViewProps {
   user: UserProfile;
@@ -87,28 +88,60 @@ export const DashboardView = ({
         <Card className="md:col-span-3 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-none">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold mb-1">Welcome back, {user.username}!</h2>
-              <p className="opacity-90">You've logged {logs.length} activities so far.</p>
+              <h2 className="text-2xl font-bold mb-1 italic">Welcome back, {user.username}!</h2>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 opacity-90 text-sm">
+                <p>You've logged {logs.length} activities so far.</p>
+                {user.weight && user.height && (
+                  <>
+                    <span className="hidden sm:inline-opacity-40">•</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold">BMI: {calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)}</span>
+                      <span className={cn("text-[10px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded-md bg-white/20", getBMICategory(calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)).color.replace('text-', 'text-white border-'))}>
+                        {getBMICategory(calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)).label}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setLogModal({ exercise: '', open: true })} className="bg-white/20 hover:bg-white/30 text-white border-none flex items-center gap-2">
-                <Plus size={18} /> Activity
+              <Button variant="secondary" onClick={() => setLogModal({ exercise: '', open: true })} className="bg-white/20 hover:bg-white/30 text-white border-none flex items-center gap-2 group">
+                <Plus size={18} className="group-hover:rotate-90 transition-transform" /> Activity
               </Button>
-              <Button variant="secondary" onClick={() => setLogWeightModal(true)} className="bg-white/20 hover:bg-white/30 text-white border-none flex items-center gap-2">
-                <Plus size={18} /> Weight
+              <Button variant="secondary" onClick={() => setLogWeightModal(true)} className="bg-white/20 hover:bg-white/30 text-white border-none flex items-center gap-2 group">
+                <Plus size={18} className="group-hover:rotate-90 transition-transform" /> Weight
               </Button>
             </div>
           </div>
-          <div className="mt-6">
-            <div className="flex justify-between text-sm mb-2 font-medium">
-              <span>Weekly Goal: {goal?.current_weekly_total || 0} / {user.weekly_goal} min</span>
-              <span>{Math.min(100, Math.round(((goal?.current_weekly_total || 0) / user.weekly_goal) * 100))}%</span>
+          <div className="mt-8 relative">
+            <div className="flex justify-between items-end mb-2">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Weekly Goal Progress</p>
+                <h4 className="text-lg font-black">
+                  {goal?.current_weekly_total || 0} <span className="text-sm font-normal opacity-70">/ {user.weekly_goal} min</span>
+                </h4>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold mb-1">
+                  {Math.round(((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%
+                </p>
+                <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight">
+                  {((goal?.current_weekly_total || 0) / user.weekly_goal) >= 1 ? "Goal Smashed! 🎉" : 
+                   ((goal?.current_weekly_total || 0) / user.weekly_goal) >= 0.75 ? "Almost there, finish strong! 💪" :
+                   ((goal?.current_weekly_total || 0) / user.weekly_goal) >= 0.5 ? "Halfway point! Keep it up! ✨" :
+                   ((goal?.current_weekly_total || 0) / user.weekly_goal) > 0 ? "Great start! Every minute counts. 🏃" : "Ready for your first session? ⚡"}
+                </p>
+              </div>
             </div>
-            <div className="w-full bg-black/20 rounded-full h-3 overflow-hidden">
-              <div 
-                className="bg-white h-full rounded-full transition-all duration-1000 ease-out" 
-                style={{ width: `${Math.min(100, ((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%` }} 
-              />
+            <div className="w-full bg-black/20 rounded-full h-4 overflow-hidden p-1 shadow-inner">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, ((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="bg-gradient-to-r from-emerald-300 to-white h-full rounded-full relative"
+              >
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]" />
+              </motion.div>
             </div>
           </div>
         </Card>
@@ -121,6 +154,8 @@ export const DashboardView = ({
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold flex items-center gap-2"><Flame className="text-orange-500" /> Activity</h3>
             <select 
+              id="dashboardStatsRange"
+              name="statsRange"
               value={statsRange} 
               onChange={(e) => handleStatsRangeChange(e.target.value as 'week' | 'month')}
               className="text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 outline-none text-zinc-600 dark:text-zinc-300"
@@ -130,35 +165,42 @@ export const DashboardView = ({
             </select>
           </div>
           <div className="h-64 w-full min-h-[16rem]">
-            {isMounted && (
-              <ResponsiveContainer width="99%" height="100%" minWidth={0}>
-                <BarChart data={stats}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
-                  <Tooltip 
-                    isAnimationActive={true}
-                    animationDuration={150}
-                    animationEasing="ease-out"
-                    cursor={{fill: isDark ? '#27272a' : '#f8fafc'}}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-700">
-                            <p className="text-sm font-bold mb-1 text-zinc-900 dark:text-zinc-100">{label}</p>
-                            <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm flex items-center gap-1">
-                              <Clock size={14} />
-                              {payload[0].value} Active Minutes
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="total_duration" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} animationDuration={400} animationBegin={0} animationEasing="ease-in-out" />
-                </BarChart>
-              </ResponsiveContainer>
+            {logs.length > 0 ? (
+              isMounted && (
+                <ResponsiveContainer width="100%" height={256}>
+                  <BarChart data={stats}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
+                    <Tooltip 
+                      isAnimationActive={true}
+                      animationDuration={150}
+                      animationEasing="ease-out"
+                      cursor={{fill: isDark ? '#27272a' : '#f8fafc'}}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-700">
+                              <p className="text-sm font-bold mb-1 text-zinc-900 dark:text-zinc-100">{label}</p>
+                              <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm flex items-center gap-1">
+                                <Clock size={14} />
+                                {payload[0].value} Active Minutes
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="total_duration" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} animationDuration={400} animationBegin={0} animationEasing="ease-in-out" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-zinc-400">
+                <Flame size={48} className="mb-4 opacity-20" />
+                <p>No activity logged yet.</p>
+              </div>
             )}
           </div>
           </Card>
@@ -170,7 +212,7 @@ export const DashboardView = ({
           <div className="h-64 w-full min-h-[16rem]">
             {weightLogs.length > 0 ? (
               isMounted && (
-                <ResponsiveContainer width="99%" height="100%" minWidth={0}>
+                <ResponsiveContainer width="100%" height={256}>
                   <LineChart data={weightLogs}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#888'}} />
@@ -227,13 +269,13 @@ export const DashboardView = ({
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
-              <input type="text" placeholder="Search exercises..." value={logSearchQuery} onChange={(e) => { setLogSearchQuery(e.target.value); setLogsPage(1); }} className="pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-colors w-full sm:w-48 text-zinc-600 dark:text-zinc-300" />
+              <input id="dashboardSearchExercises" name="searchExercises" type="text" placeholder="Search exercises..." value={logSearchQuery} onChange={(e) => { setLogSearchQuery(e.target.value); setLogsPage(1); }} className="pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-colors w-full sm:w-48 text-zinc-600 dark:text-zinc-300" />
             </div>
             <div className="flex items-center gap-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 px-3 py-1.5 rounded-lg border border-zinc-100 dark:border-zinc-800 transition-colors">
               <Filter size={14} className="text-zinc-400 dark:text-zinc-500" />
-              <input type="date" value={filterStartDate} onChange={(e) => { setFilterStartDate(e.target.value); setLogsPage(1); }} className="bg-transparent text-zinc-600 dark:text-zinc-300 outline-none w-full sm:w-auto [color-scheme:light] dark:[color-scheme:dark]" title="Start Date" />
+              <input id="dashboardStartDate" name="startDate" type="date" value={filterStartDate} onChange={(e) => { setFilterStartDate(e.target.value); setLogsPage(1); }} className="bg-transparent text-zinc-600 dark:text-zinc-300 outline-none w-full sm:w-auto [color-scheme:light] dark:[color-scheme:dark]" title="Start Date" />
               <span className="text-zinc-400">-</span>
-              <input type="date" value={filterEndDate} onChange={(e) => { setFilterEndDate(e.target.value); setLogsPage(1); }} className="bg-transparent text-zinc-600 dark:text-zinc-300 outline-none w-full sm:w-auto [color-scheme:light] dark:[color-scheme:dark]" title="End Date" />
+              <input id="dashboardEndDate" name="endDate" type="date" value={filterEndDate} onChange={(e) => { setFilterEndDate(e.target.value); setLogsPage(1); }} className="bg-transparent text-zinc-600 dark:text-zinc-300 outline-none w-full sm:w-auto [color-scheme:light] dark:[color-scheme:dark]" title="End Date" />
               {(filterStartDate || filterEndDate || logSearchQuery) && (
                 <button onClick={() => { setFilterStartDate(''); setFilterEndDate(''); setLogSearchQuery(''); setLogsPage(1); }} className="text-zinc-400 hover:text-zinc-600 transition-colors ml-1 font-bold text-lg leading-none" title="Clear Filters"><X size={16} /></button>
               )}
@@ -265,7 +307,7 @@ export const DashboardView = ({
           <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 transition-colors gap-4">
             <div className="flex items-center gap-3">
               <span className="text-sm text-zinc-500 dark:text-zinc-400">Showing {indexOfFirstLog + 1} to {Math.min(indexOfLastLog, filteredLogs.length)} of {filteredLogs.length} logs</span>
-              <select value={logsPerPage} onChange={(e) => { setLogsPerPage(Number(e.target.value)); setLogsPage(1); }} className="text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 outline-none text-zinc-600 dark:text-zinc-300 transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"><option value={5}>5 / page</option><option value={10}>10 / page</option><option value={20}>20 / page</option><option value={50}>50 / page</option></select>
+              <select id="dashboardLogsPerPage" name="logsPerPage" value={logsPerPage} onChange={(e) => { setLogsPerPage(Number(e.target.value)); setLogsPage(1); }} className="text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 outline-none text-zinc-600 dark:text-zinc-300 transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"><option value={5}>5 / page</option><option value={10}>10 / page</option><option value={20}>20 / page</option><option value={50}>50 / page</option></select>
             </div>
             <div className="flex gap-2"><Button variant="outline" onClick={() => setLogsPage(p => Math.max(1, p - 1))} disabled={logsPage === 1} className="px-3 py-1.5 text-sm">Previous</Button><Button variant="outline" onClick={() => setLogsPage(p => Math.min(totalPages, p + 1))} disabled={logsPage >= totalPages} className="px-3 py-1.5 text-sm">Next</Button></div>
           </div>

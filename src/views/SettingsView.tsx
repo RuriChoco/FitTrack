@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button } from '../ui';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Activity } from 'lucide-react';
 import { api, type UserProfile } from '../api';
-import { cn, getPasswordStrength, PREDEFINED_AVATARS } from '../utils';
+import { cn, getPasswordStrength, PREDEFINED_AVATARS, calculateBMI, getBMICategory } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SettingsViewProps {
@@ -92,8 +92,18 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
         const newTargetWeight = parseFloat(formData.get('target_weight') as string);
         const newGoalType = formData.get('goal_type') as string;
         const newWeightUnit = formData.get('weight_unit') as string;
+        const newHeight = parseFloat(formData.get('height') as string);
+        const newHeightUnit = formData.get('height_unit') as string;
         
-        const updateData: any = { age: newAge, gender: newGender, avatar: newAvatar, weekly_goal: newWeeklyGoal, goal_type: newGoalType, weight_unit: newWeightUnit };
+        const updateData: any = { 
+          age: newAge, 
+          gender: newGender, 
+          avatar: newAvatar, 
+          weekly_goal: newWeeklyGoal, 
+          goal_type: newGoalType, 
+          weight_unit: newWeightUnit,
+          height_unit: newHeightUnit
+        };
         if (newPassword) {
           if (!oldPassword) {
             showToast('Please enter your current password to change it.', 'error');
@@ -115,6 +125,7 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
         }
         if (!isNaN(newWeight)) updateData.weight = newWeight;
         if (!isNaN(newTargetWeight)) updateData.target_weight = newTargetWeight;
+        if (!isNaN(newHeight)) updateData.height = newHeight;
 
         const res = await api.updateProfile(updateData);
         if (res.ok) {
@@ -242,6 +253,51 @@ export function SettingsView({ user, setUser, fetchUserData, setView, showToast,
                   </select>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Height</label>
+                  <input 
+                    name="height"
+                    type="number" 
+                    step="0.1"
+                    defaultValue={user.height || ''}
+                    placeholder={user.height_unit === 'cm' ? 'e.g. 175' : 'e.g. 69'}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Height Unit</label>
+                  <select 
+                    name="height_unit"
+                    defaultValue={user.height_unit || 'in'}
+                    className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900"
+                  >
+                    <option value="in">inches (in)</option>
+                    <option value="cm">centimeters (cm)</option>
+                  </select>
+                </div>
+              </div>
+
+              {user.weight && user.height && (
+                <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 flex items-center justify-between group overflow-hidden relative">
+                  <div className="absolute -right-4 -bottom-4 opacity-[0.03] dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
+                    <Activity size={80} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">Calculated BMI</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100">{calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)}</span>
+                      <span className={cn("text-sm font-bold", getBMICategory(calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)).color)}>
+                        {getBMICategory(calculateBMI(user.weight, user.weight_unit, user.height, user.height_unit)).label}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-700 flex items-center justify-center text-emerald-500">
+                    <Activity size={20} />
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </div>

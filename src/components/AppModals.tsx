@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Button } from '../ui';
 import { cn } from '../utils';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, X } from 'lucide-react';
 import { api, type ActivityLog, type UserProfile, type WeightLog } from '../api';
 
 interface AppModalsProps {
@@ -33,7 +33,13 @@ export function AppModals({
     <>
       {logModal.open && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-sm">
+          <Card className="w-full max-w-sm relative group overflow-hidden">
+            <button 
+              onClick={() => setLogModal({ exercise: '', open: false })}
+              className="absolute right-4 top-4 p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors z-10"
+            >
+              <X size={20} />
+            </button>
             <h3 className="text-xl font-bold mb-2">Log Activity</h3>
             <p className="text-zinc-500 dark:text-zinc-400 mb-6">
               {logModal.exercise ? <>How long did you do <strong>{logModal.exercise}</strong>?</> : 'What did you do today?'}
@@ -53,7 +59,24 @@ export function AppModals({
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Duration (minutes)</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Duration (minutes)</label>
+                  <div className="flex gap-1.5">
+                    {[15, 30, 45, 60].map(dur => (
+                      <button
+                        key={dur}
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById('modal-duration') as HTMLInputElement;
+                          if (input) input.value = dur.toString();
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors border border-zinc-200 dark:border-zinc-700 hover:border-emerald-200 dark:hover:border-emerald-800"
+                      >
+                        {dur}m
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <input 
                   autoFocus={!!logModal.exercise}
                   type="number" 
@@ -85,7 +108,13 @@ export function AppModals({
 
       {logWeightModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-sm">
+          <Card className="w-full max-w-sm relative">
+            <button 
+              onClick={() => setLogWeightModal(false)}
+              className="absolute right-4 top-4 p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors z-10"
+            >
+              <X size={20} />
+            </button>
             <h3 className="text-xl font-bold mb-2">Log Weight</h3>
             <p className="text-zinc-500 dark:text-zinc-400 mb-6">Keep track of your current weight.</p>
             <div className="space-y-4">

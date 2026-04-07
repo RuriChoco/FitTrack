@@ -134,6 +134,8 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
               <div>
                 <label className="block text-sm font-medium mb-1">Username</label>
                 <input
+                  id="username"
+                  name="username"
                   required
                   type="text"
                   value={username}
@@ -145,6 +147,8 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
                 <div>
                   <label className="block text-sm font-medium mb-1">Age</label>
                   <input
+                    id="age"
+                    name="age"
                     required
                     type="number"
                     value={age}
@@ -155,6 +159,8 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
                 <div>
                   <label className="block text-sm font-medium mb-1">Gender</label>
                   <select
+                    id="gender"
+                    name="gender"
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
                     className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none [&>option]:bg-white dark:[&>option]:bg-zinc-900"
@@ -325,6 +331,8 @@ export function ProfileView({ onLoginSuccess, isDark, toggleTheme, showToast }: 
               <div>
                 <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-zinc-100">Email</label>
                 <input 
+                  id="resetEmail"
+                  name="resetEmail"
                   autoFocus
                   required
                   type="email" 

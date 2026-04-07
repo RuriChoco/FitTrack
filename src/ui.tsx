@@ -5,7 +5,11 @@ export const Card = ({ children, className, onClick, ...props }: { children: Rea
   <div 
     {...props}
     onClick={onClick}
-    className={cn("bg-white dark:bg-zinc-900 rounded-2xl border border-black/5 dark:border-white/10 shadow-sm p-6 transition-colors", className)}
+    className={cn(
+      "bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 shadow-sm p-6 transition-all duration-300",
+      onClick ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm" : "",
+      className
+    )}
   >
     {children}
   </div>
@@ -27,9 +31,9 @@ export const Button = ({
   disabled?: boolean;
 }) => {
   const variants = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700",
-    secondary: "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors",
-    outline: "border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+    primary: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm hover:shadow-emerald-500/20",
+    secondary: "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-sm",
+    outline: "border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
   };
 
   return (
@@ -38,7 +42,7 @@ export const Button = ({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "px-6 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50",
+        "px-6 py-2.5 rounded-xl font-bold transition-all active:scale-[0.98] active:brightness-90 disabled:opacity-50 disabled:active:scale-100",
         variants[variant],
         className
       )}

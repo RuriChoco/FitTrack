@@ -441,10 +441,14 @@ export default function App() {
               const weight = parseFloat(formData.get('weight') as string);
               const target_weight = parseFloat(formData.get('target_weight') as string);
               const weight_unit = formData.get('weight_unit') as string;
+              const height = parseFloat(formData.get('height') as string);
+              const height_unit = formData.get('height_unit') as string;
+              const age = parseInt(formData.get('age') as string);
+              const gender = formData.get('gender') as string;
               const weekly_goal = parseInt(formData.get('weekly_goal') as string);
               const goal_type = formData.get('goal_type') as string;
 
-              const res = await api.updateProfile({ weight, target_weight, weight_unit, weekly_goal, goal_type });
+              const res = await api.updateProfile({ age, gender, height, height_unit, weight, target_weight, weight_unit, weekly_goal, goal_type });
               if (res.ok) {
                 const updatedUser = await res.json();
                 setUser(updatedUser);
@@ -481,6 +485,33 @@ export default function App() {
                     <option value="maintain">Maintain</option>
                     <option value="lose_weight">Lose Weight</option>
                     <option value="build_muscle">Build Muscle</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Height</label>
+                  <input name="height" type="number" step="0.1" required placeholder="e.g. 69" className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Height Unit</label>
+                  <select name="height_unit" defaultValue="in" className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900">
+                    <option value="in">in</option>
+                    <option value="cm">cm</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Age</label>
+                  <input name="age" type="number" defaultValue={user.age} required className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Gender</label>
+                  <select name="gender" defaultValue={user.gender} className="w-full px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent focus:ring-2 focus:ring-emerald-500 outline-none transition-colors [&>option]:bg-white dark:[&>option]:bg-zinc-900">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
               </div>

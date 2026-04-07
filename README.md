@@ -1,20 +1,43 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# FitTrack
 
-# Run and deploy your AI Studio app
+A modern, highly responsive, and comprehensive web application for tracking your fitness journey. With built-in integrations for managing daily activities, tracking your BMI, following tailored recommendations, and pursuing weekly fitness goals.
 
-This contains everything you need to run your app locally.
+## Important Note
 
-View your app in AI Studio: https://ai.studio/apps/ff9fc0ce-6bd4-4a66-ba75-a78adcc2d605
+This is a **Firebase** powered application utilizing Firestore, Auth, and Storage.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js, npm, Java (for Firebase emulators)
 
-
-1. Install dependencies:
+1. **Install dependencies:**
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+
+2. **Configure Environment:**
+   If running locally against Firebase Emulators, ensure `.env` file maps your API keys appropriately (they can be dummy keys when running emulators).
+
+3. **Start the Local Firebase Emulator Suite:**
+   `npm run emulators`
+   *(This launches the Auth, Firestore, and Storage emulators on your loopback).*
+
+4. **Start the Frontend Development Server:**
    `npm run dev`
+
+5. **Access the application!**
+   Navigate to `http://localhost:3000` via your web browser.
+
+## Features
+
+- **Activity Tracking Engine**: Log your daily exercise, track active minutes, and maintain streaks.
+- **Dynamic Weekly Goals**: Set and monitor your weekly activity quotas with visually engaging progression charts.
+- **Biometric Calculations**: Deeply integrated BMI calculation mapping metric and imperial conversions seamlessly.
+- **Tailored Recommendations**: Discover new exercises via the "Recommended for You" panel, offering ~40 structured exercises filtering by Goal Types, Difficulty, and Activity Category.
+- **Milestone Achievements**: Unlock motivational badges based on consistency and logged time.
+- **Light/Dark Accessibility**: Fully customized Dark and Light themes leveraging Framer Motion and Tailwind variables for a premium visual experience.
+
+## Building for Production
+
+If you wish to deploy FitTrack to a production environment:
+1. Double-check `firebase.json` for proper hosting targets.
+2. Run `npm run build` to bundle your front-end using Vite.
+3. Deploy to your provider (e.g. `firebase deploy`).
