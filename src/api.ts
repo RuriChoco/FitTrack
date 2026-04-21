@@ -21,6 +21,7 @@ export interface Exercise {
   name: string;
   category: string;
   difficulty?: string;
+  met?: number;
 }
 
 export interface ActivityLog {
@@ -104,62 +105,62 @@ const mockResponse = (data?: any, ok = true, status = 200) => ({
 
 const SEED_EXERCISES: Exercise[] = [
   // Beginner
-  { id: '1', name: 'Brisk Walking', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '2', name: 'Gentle Yoga', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '4', name: 'Chair Aerobics', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '6', name: 'Tai Chi', category: 'Balance', difficulty: 'Beginner' },
-  { id: '8', name: 'Stretching Routine', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '12', name: 'Slow Jogging', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '13', name: 'Cycling (Leisure)', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '14', name: 'Water Aerobics', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '15', name: 'Foam Rolling', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '16', name: 'Wall Push-Ups', category: 'Strength', difficulty: 'Beginner' },
-  { id: '17', name: 'Seated Leg Raises', category: 'Strength', difficulty: 'Beginner' },
-  { id: '18', name: 'Glute Bridges', category: 'Strength', difficulty: 'Beginner' },
-  { id: '38', name: 'Walking Lunges', category: 'Strength', difficulty: 'Beginner' },
-  { id: '39', name: 'Knee Push-Ups', category: 'Strength', difficulty: 'Beginner' },
-  { id: '40', name: 'Restorative Yoga', category: 'Flexibility', difficulty: 'Beginner' },
-  { id: '41', name: 'Morning Walk', category: 'Cardio', difficulty: 'Beginner' },
-  { id: '42', name: 'Pelvic Tilts', category: 'Flexibility', difficulty: 'Beginner' },
+  { id: '1', name: 'Brisk Walking', category: 'Cardio', difficulty: 'Beginner', met: 4.5 },
+  { id: '2', name: 'Gentle Yoga', category: 'Flexibility', difficulty: 'Beginner', met: 2.5 },
+  { id: '4', name: 'Chair Aerobics', category: 'Cardio', difficulty: 'Beginner', met: 3.5 },
+  { id: '6', name: 'Tai Chi', category: 'Balance', difficulty: 'Beginner', met: 3.0 },
+  { id: '8', name: 'Stretching Routine', category: 'Flexibility', difficulty: 'Beginner', met: 2.3 },
+  { id: '12', name: 'Slow Jogging', category: 'Cardio', difficulty: 'Beginner', met: 6.0 },
+  { id: '13', name: 'Cycling (Leisure)', category: 'Cardio', difficulty: 'Beginner', met: 4.0 },
+  { id: '14', name: 'Water Aerobics', category: 'Cardio', difficulty: 'Beginner', met: 4.0 },
+  { id: '15', name: 'Foam Rolling', category: 'Flexibility', difficulty: 'Beginner', met: 2.0 },
+  { id: '16', name: 'Wall Push-Ups', category: 'Strength', difficulty: 'Beginner', met: 3.0 },
+  { id: '17', name: 'Seated Leg Raises', category: 'Strength', difficulty: 'Beginner', met: 2.8 },
+  { id: '18', name: 'Glute Bridges', category: 'Strength', difficulty: 'Beginner', met: 3.0 },
+  { id: '38', name: 'Walking Lunges', category: 'Strength', difficulty: 'Beginner', met: 3.5 },
+  { id: '39', name: 'Knee Push-Ups', category: 'Strength', difficulty: 'Beginner', met: 3.8 },
+  { id: '40', name: 'Restorative Yoga', category: 'Flexibility', difficulty: 'Beginner', met: 2.0 },
+  { id: '41', name: 'Morning Walk', category: 'Cardio', difficulty: 'Beginner', met: 3.8 },
+  { id: '42', name: 'Pelvic Tilts', category: 'Flexibility', difficulty: 'Beginner', met: 2.0 },
 
   // Intermediate
-  { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '5', name: 'Resistance Band Training', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '7', name: 'Bodyweight Squats', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '9', name: 'Dancing', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '10', name: 'Pilates', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '19', name: 'Jump Rope', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '20', name: 'Balance Board', category: 'Balance', difficulty: 'Intermediate' },
-  { id: '21', name: 'Rowing Machine', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '22', name: 'Stair Climbing', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '23', name: 'Cycling (Moderate)', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '24', name: 'Running', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '25', name: 'Dumbbell Rows', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '26', name: 'Lunges', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '27', name: 'Push-Ups', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '28', name: 'Plank Hold', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '29', name: 'Basketball', category: 'Sports', difficulty: 'Intermediate' },
-  { id: '30', name: 'Tennis / Badminton', category: 'Sports', difficulty: 'Intermediate' },
-  { id: '43', name: 'Kettlebell Swings', category: 'Strength', difficulty: 'Intermediate' },
-  { id: '44', name: 'Mountain Climbers', category: 'HIIT', difficulty: 'Intermediate' },
-  { id: '45', name: 'Hiking', category: 'Cardio', difficulty: 'Intermediate' },
-  { id: '46', name: 'Vinyasa Yoga', category: 'Flexibility', difficulty: 'Intermediate' },
-  { id: '47', name: 'Core Crusher', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate', met: 7.0 },
+  { id: '5', name: 'Resistance Band Training', category: 'Strength', difficulty: 'Intermediate', met: 4.5 },
+  { id: '7', name: 'Bodyweight Squats', category: 'Strength', difficulty: 'Intermediate', met: 5.0 },
+  { id: '9', name: 'Dancing', category: 'Cardio', difficulty: 'Intermediate', met: 6.0 },
+  { id: '10', name: 'Pilates', category: 'Strength', difficulty: 'Intermediate', met: 3.5 },
+  { id: '19', name: 'Jump Rope', category: 'Cardio', difficulty: 'Intermediate', met: 10.0 },
+  { id: '20', name: 'Balance Board', category: 'Balance', difficulty: 'Intermediate', met: 3.5 },
+  { id: '21', name: 'Rowing Machine', category: 'Cardio', difficulty: 'Intermediate', met: 7.0 },
+  { id: '22', name: 'Stair Climbing', category: 'Cardio', difficulty: 'Intermediate', met: 8.0 },
+  { id: '23', name: 'Cycling (Moderate)', category: 'Cardio', difficulty: 'Intermediate', met: 7.5 },
+  { id: '24', name: 'Running', category: 'Cardio', difficulty: 'Intermediate', met: 9.8 },
+  { id: '25', name: 'Dumbbell Rows', category: 'Strength', difficulty: 'Intermediate', met: 5.5 },
+  { id: '26', name: 'Lunges', category: 'Strength', difficulty: 'Intermediate', met: 5.5 },
+  { id: '27', name: 'Push-Ups', category: 'Strength', difficulty: 'Intermediate', met: 6.0 },
+  { id: '28', name: 'Plank Hold', category: 'Strength', difficulty: 'Intermediate', met: 4.0 },
+  { id: '29', name: 'Basketball', category: 'Sports', difficulty: 'Intermediate', met: 8.0 },
+  { id: '30', name: 'Tennis / Badminton', category: 'Sports', difficulty: 'Intermediate', met: 5.5 },
+  { id: '43', name: 'Kettlebell Swings', category: 'Strength', difficulty: 'Intermediate', met: 8.0 },
+  { id: '44', name: 'Mountain Climbers', category: 'HIIT', difficulty: 'Intermediate', met: 9.0 },
+  { id: '45', name: 'Hiking', category: 'Cardio', difficulty: 'Intermediate', met: 6.0 },
+  { id: '46', name: 'Vinyasa Yoga', category: 'Flexibility', difficulty: 'Intermediate', met: 4.0 },
+  { id: '47', name: 'Core Crusher', category: 'Strength', difficulty: 'Intermediate', met: 6.5 },
 
   // Advanced
-  { id: '11', name: 'Heavy Lifting', category: 'Strength', difficulty: 'Advanced' },
-  { id: '31', name: 'HIIT Circuit', category: 'HIIT', difficulty: 'Advanced' },
-  { id: '32', name: 'Sprinting Intervals', category: 'HIIT', difficulty: 'Advanced' },
-  { id: '33', name: 'CrossFit WOD', category: 'HIIT', difficulty: 'Advanced' },
-  { id: '34', name: 'Olympic Weightlifting', category: 'Strength', difficulty: 'Advanced' },
-  { id: '35', name: 'Triathlon Training', category: 'Cardio', difficulty: 'Advanced' },
-  { id: '36', name: 'Rock Climbing', category: 'Sports', difficulty: 'Advanced' },
-  { id: '37', name: 'Advanced Yoga (Ashtanga)', category: 'Flexibility', difficulty: 'Advanced' },
-  { id: '48', name: 'Burpees', category: 'HIIT', difficulty: 'Advanced' },
-  { id: '49', name: 'Muscle-Ups', category: 'Strength', difficulty: 'Advanced' },
-  { id: '50', name: 'Trail Running', category: 'Cardio', difficulty: 'Advanced' },
-  { id: '51', name: 'Plyometric Jumps', category: 'HIIT', difficulty: 'Advanced' },
-  { id: '52', name: 'Marathon Training', category: 'Cardio', difficulty: 'Advanced' },
+  { id: '11', name: 'Heavy Lifting', category: 'Strength', difficulty: 'Advanced', met: 6.0 },
+  { id: '31', name: 'HIIT Circuit', category: 'HIIT', difficulty: 'Advanced', met: 12.0 },
+  { id: '32', name: 'Sprinting Intervals', category: 'HIIT', difficulty: 'Advanced', met: 13.0 },
+  { id: '33', name: 'CrossFit WOD', category: 'HIIT', difficulty: 'Advanced', met: 12.5 },
+  { id: '34', name: 'Olympic Weightlifting', category: 'Strength', difficulty: 'Advanced', met: 7.5 },
+  { id: '35', name: 'Triathlon Training', category: 'Cardio', difficulty: 'Advanced', met: 11.0 },
+  { id: '36', name: 'Rock Climbing', category: 'Sports', difficulty: 'Advanced', met: 8.0 },
+  { id: '37', name: 'Advanced Yoga (Ashtanga)', category: 'Flexibility', difficulty: 'Advanced', met: 5.0 },
+  { id: '48', name: 'Burpees', category: 'HIIT', difficulty: 'Advanced', met: 11.0 },
+  { id: '49', name: 'Muscle-Ups', category: 'Strength', difficulty: 'Advanced', met: 9.0 },
+  { id: '50', name: 'Trail Running', category: 'Cardio', difficulty: 'Advanced', met: 10.5 },
+  { id: '51', name: 'Plyometric Jumps', category: 'HIIT', difficulty: 'Advanced', met: 10.0 },
+  { id: '52', name: 'Marathon Training', category: 'Cardio', difficulty: 'Advanced', met: 9.0 },
 ];
 
 export const api = {
@@ -494,13 +495,52 @@ export const api = {
   logActivity: async (data: any) => {
     try {
       if (!auth.currentUser) throw new Error('Not auth');
+      const uid = auth.currentUser.uid;
 
       const batch = writeBatch(db);
       const newLogRef = doc(collection(db, 'activity_logs'));
-      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const userRef = doc(db, 'users', uid);
+
+      // Fetch current user data for weight adjustment
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.weight) {
+          // Find MET for this activity
+          const exercise = SEED_EXERCISES.find(e => e.name === data.exercise_name);
+          const met = exercise?.met || 5.0; // Default MET if not found
+          
+          // Calories = MET * weight_kg * duration_hours
+          const weightKg = userData.weight_unit === 'lbs' ? userData.weight * 0.453592 : userData.weight;
+          const durationHrs = data.duration / 60;
+          const caloriesBurned = met * weightKg * durationHrs;
+          
+          // Weight loss (approx 3500 kcal per lb)
+          const weightLossLbs = caloriesBurned / 3500;
+          const weightLoss = userData.weight_unit === 'lbs' ? weightLossLbs : weightLossLbs * 0.453592;
+          
+          const newWeight = Math.max(1, userData.weight - weightLoss);
+          
+          batch.update(userRef, { 
+            weight: Number(newWeight.toFixed(2)),
+            last_logged_at: serverTimestamp() 
+          });
+
+          // Also add a weight log entry for the adjustment
+          const dateStr = new Date().toISOString().split('T')[0];
+          const weightLogRef = doc(collection(db, 'weight_logs'));
+          batch.set(weightLogRef, { 
+            user_id: uid, 
+            weight: Number(newWeight.toFixed(2)), 
+            date: dateStr,
+            is_auto: true 
+          });
+        } else {
+          batch.update(userRef, { last_logged_at: serverTimestamp() });
+        }
+      }
 
       batch.set(newLogRef, data);
-      batch.update(userRef, { last_logged_at: serverTimestamp() });
       await batch.commit();
 
       return mockResponse({ success: true });
