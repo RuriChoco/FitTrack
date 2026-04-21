@@ -14,7 +14,6 @@ export interface UserProfile {
   height?: number;
   height_unit?: string;
   goal_type?: string;
-  emailVerified?: boolean;
 }
 
 export interface Exercise {
@@ -117,6 +116,11 @@ const SEED_EXERCISES: Exercise[] = [
   { id: '16', name: 'Wall Push-Ups', category: 'Strength', difficulty: 'Beginner' },
   { id: '17', name: 'Seated Leg Raises', category: 'Strength', difficulty: 'Beginner' },
   { id: '18', name: 'Glute Bridges', category: 'Strength', difficulty: 'Beginner' },
+  { id: '38', name: 'Walking Lunges', category: 'Strength', difficulty: 'Beginner' },
+  { id: '39', name: 'Knee Push-Ups', category: 'Strength', difficulty: 'Beginner' },
+  { id: '40', name: 'Restorative Yoga', category: 'Flexibility', difficulty: 'Beginner' },
+  { id: '41', name: 'Morning Walk', category: 'Cardio', difficulty: 'Beginner' },
+  { id: '42', name: 'Pelvic Tilts', category: 'Flexibility', difficulty: 'Beginner' },
 
   // Intermediate
   { id: '3', name: 'Swimming', category: 'Cardio', difficulty: 'Intermediate' },
@@ -136,6 +140,11 @@ const SEED_EXERCISES: Exercise[] = [
   { id: '28', name: 'Plank Hold', category: 'Strength', difficulty: 'Intermediate' },
   { id: '29', name: 'Basketball', category: 'Sports', difficulty: 'Intermediate' },
   { id: '30', name: 'Tennis / Badminton', category: 'Sports', difficulty: 'Intermediate' },
+  { id: '43', name: 'Kettlebell Swings', category: 'Strength', difficulty: 'Intermediate' },
+  { id: '44', name: 'Mountain Climbers', category: 'HIIT', difficulty: 'Intermediate' },
+  { id: '45', name: 'Hiking', category: 'Cardio', difficulty: 'Intermediate' },
+  { id: '46', name: 'Vinyasa Yoga', category: 'Flexibility', difficulty: 'Intermediate' },
+  { id: '47', name: 'Core Crusher', category: 'Strength', difficulty: 'Intermediate' },
 
   // Advanced
   { id: '11', name: 'Heavy Lifting', category: 'Strength', difficulty: 'Advanced' },
@@ -146,6 +155,11 @@ const SEED_EXERCISES: Exercise[] = [
   { id: '35', name: 'Triathlon Training', category: 'Cardio', difficulty: 'Advanced' },
   { id: '36', name: 'Rock Climbing', category: 'Sports', difficulty: 'Advanced' },
   { id: '37', name: 'Advanced Yoga (Ashtanga)', category: 'Flexibility', difficulty: 'Advanced' },
+  { id: '48', name: 'Burpees', category: 'HIIT', difficulty: 'Advanced' },
+  { id: '49', name: 'Muscle-Ups', category: 'Strength', difficulty: 'Advanced' },
+  { id: '50', name: 'Trail Running', category: 'Cardio', difficulty: 'Advanced' },
+  { id: '51', name: 'Plyometric Jumps', category: 'HIIT', difficulty: 'Advanced' },
+  { id: '52', name: 'Marathon Training', category: 'Cardio', difficulty: 'Advanced' },
 ];
 
 export const api = {
@@ -218,12 +232,7 @@ export const api = {
         goal_type: data.goal_type || 'maintain'
       };
       await setDoc(doc(db, 'users', cred.user.uid), userDoc);
-      try {
-        await sendEmailVerification(cred.user);
-      } catch (emailErr) {
-        console.error("Failed to send verification email:", emailErr);
-      }
-      return mockResponse({ user: { ...userDoc, emailVerified: false }, token: 'firebase-token' });
+      return mockResponse({ user: { ...userDoc }, token: 'firebase-token' });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Signup failed' }, false, 400);
     }
@@ -239,32 +248,10 @@ export const api = {
         await updateDoc(doc(db, 'users', cred.user.uid), { google_avatar: cred.user.photoURL });
         userData.google_avatar = cred.user.photoURL;
       }
-      return mockResponse({ user: { ...userData, emailVerified: cred.user.emailVerified }, token: 'firebase-token' });
+      return mockResponse({ user: { ...userData }, token: 'firebase-token' });
     } catch (e: any) {
       return mockResponse({ error: e.message || 'Login failed' }, false, 401);
     }
-  },
-
-  resendVerification: async () => {
-    try {
-      if (auth.currentUser && !auth.currentUser.emailVerified) {
-        await sendEmailVerification(auth.currentUser);
-        return mockResponse({ success: true });
-      }
-      return mockResponse({ error: 'User already verified or not logged in.' }, false, 400);
-    } catch (e: any) {
-      return mockResponse({ error: e.message || 'Failed to resend verification email.' }, false, 400);
-    }
-  },
-
-  checkEmailVerification: async () => {
-    try {
-      if (auth.currentUser) {
-        await auth.currentUser.reload();
-        return mockResponse({ emailVerified: auth.currentUser.emailVerified });
-      }
-      return mockResponse({ error: 'Not auth' }, false, 401);
-    } catch (e: any) { return mockResponse({ error: e.message }, false, 500); }
   },
 
   resetPassword: async (email: string) => {
@@ -369,7 +356,7 @@ export const api = {
           await updateDoc(doc(db, 'users', auth.currentUser.uid), { google_avatar: auth.currentUser.photoURL });
           data.google_avatar = auth.currentUser.photoURL;
         }
-        return mockResponse({ ...data, emailVerified: auth.currentUser.emailVerified });
+        return mockResponse({ ...data });
       }
       return mockResponse({ error: 'Not auth' }, false, 401);
     } catch (e) {
@@ -408,6 +395,15 @@ export const api = {
 
   getRecommendations: async (age: number, gender: string, goal_type?: string) => {
     let recs = [...SEED_EXERCISES];
+    
+    // Age-based filtering
+    if (age < 18) {
+      recs = recs.filter(e => !(e.name === 'Heavy Lifting' || (e.difficulty === 'Advanced' && e.category === 'HIIT')));
+    } else if (age >= 60) {
+      recs = recs.filter(e => e.difficulty !== 'Advanced' && e.category !== 'HIIT');
+    }
+
+    // Goal-based filtering
     if (goal_type === 'lose_weight') {
       recs = recs.filter(e => e.category === 'Cardio' || e.category === 'Flexibility' || e.category === 'HIIT');
     } else if (goal_type === 'build_muscle') {

@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './index.css';
 
 // Set the browser tab title
-document.title = 'FitTrack';
+document.title = 'Exercise Tracking System';
 
 // Set the browser tab icon (favicon) to the FitTrack Activity logo
 let favicon = document.querySelector("link[rel~='icon']") as HTMLLinkElement;

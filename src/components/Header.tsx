@@ -27,10 +27,10 @@ export function Header({ user, streak, isDark, toggleTheme, setView, handleLogou
   }, []);
 
   return (
-    <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 z-10 transition-colors">
-      <div className="flex items-center gap-2 text-emerald-600 font-bold text-xl">
-        <Activity size={24} />
-        <span>FitTrack</span>
+    <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 z-50 transition-colors">
+      <div className="flex items-center gap-2 text-emerald-600 font-bold text-base sm:text-xl tracking-tight">
+        <Activity size={24} className="shrink-0" />
+        <span className="hidden xs:inline">Exercise Tracking System</span>
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-orange-100 dark:border-orange-800 transition-colors" title="Current Streak">

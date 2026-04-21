@@ -16,6 +16,7 @@ import { AchievementsView } from './views/AchievementsView';
 import { Header } from './components/Header';
 import { MobileNav } from './components/MobileNav';
 import { AppModals } from './components/AppModals';
+import { AchievementCelebration } from './components/AchievementCelebration';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -42,11 +43,12 @@ export default function App() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isOnboardingSaving, setIsOnboardingSaving] = useState(false);
-  const [isResendingVerification, setIsResendingVerification] = useState(false);
+
   
   const [logModal, setLogModal] = useState<{ exercise: string; open: boolean }>({ exercise: '', open: false });
   const [editModal, setEditModal] = useState<{ log: ActivityLog | null; open: boolean }>({ log: null, open: false });
   const [logWeightModal, setLogWeightModal] = useState(false);
+  const [pendingAchievements, setPendingAchievements] = useState<Achievement[]>([]);
 
   const fetchUserData = useCallback(async (u: UserProfile) => {
     try {
@@ -71,7 +73,19 @@ export default function App() {
         
         if (statRes.ok) setStats(await statRes.json());
         if (goalRes.ok) setGoal(await goalRes.json());
-        if (achRes.ok) setAchievements(await achRes.json());
+        if (achRes.ok) {
+          const newAchData = await achRes.json();
+          setAchievements(prev => {
+            // Find newly earned achievements
+            const prevIds = new Set(prev.map(a => a.id));
+            const justEarned = newAchData.filter((a: Achievement) => !prevIds.has(a.id));
+            
+            if (justEarned.length > 0 && prev.length > 0) {
+              setPendingAchievements(current => [...current, ...justEarned]);
+            }
+            return newAchData;
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to fetch data", err);
@@ -138,23 +152,7 @@ export default function App() {
     }
   }, [user]);
 
-  // Poll for email verification if unverified
-  useEffect(() => {
-    if (user?.emailVerified !== false) return;
 
-    const intervalId = setInterval(async () => {
-      const res = await api.checkEmailVerification();
-      if (res.ok) {
-        const data = await res.json();
-        if (data.emailVerified) {
-          setUser(prev => prev ? { ...prev, emailVerified: true } : null);
-          showToast('Email verified successfully! Thank you.', 'success');
-        }
-      }
-    }, 5000); // Check every 5 seconds
-
-    return () => clearInterval(intervalId);
-  }, [user?.emailVerified, showToast]);
 
   const isAnyModalOpen = showOnboarding || logModal.open || editModal.open || logWeightModal || confirmDialog !== null;
 
@@ -304,6 +302,11 @@ export default function App() {
           showToast={showToast} 
         />
         {renderToast()}
+        
+        <AchievementCelebration 
+          achievement={pendingAchievements[0] || null} 
+          onClose={() => setPendingAchievements(prev => prev.slice(1))}
+        />
       </>
     );
   }
@@ -322,29 +325,7 @@ export default function App() {
           ))}
         </datalist>
 
-        {user && user.emailVerified === false && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-xl border border-amber-100 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between transition-colors shadow-sm gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xl" role="img" aria-label="warning">⚠️</span>
-              <span className="font-medium text-sm">Please verify your email address. Some features may be limited until verified.</span>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={async () => {
-                setIsResendingVerification(true);
-                const res = await api.resendVerification();
-                if (res.ok) showToast('Verification email resent! Check your inbox.', 'success');
-                else { const err = await res.json(); showToast(err.error || 'Failed to resend verification email.', 'error'); }
-                setIsResendingVerification(false);
-              }}
-              disabled={isResendingVerification}
-              className="whitespace-nowrap text-xs py-1.5 h-auto bg-amber-100/50 hover:bg-amber-200/50 dark:bg-amber-900/50 dark:hover:bg-amber-800/50 border-amber-200 dark:border-amber-700 text-amber-900 dark:text-amber-100 w-full sm:w-auto flex items-center justify-center gap-2"
-            >
-              {isResendingVerification && <Loader2 size={14} className="animate-spin" />}
-              {isResendingVerification ? 'Sending...' : 'Resend Email'}
-            </Button>
-          </div>
-        )}
+
 
         {user && announcement && announcement.message && announcement.date !== dismissedDate && (
           <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 px-4 py-3 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center justify-between transition-colors shadow-sm">
@@ -383,7 +364,7 @@ export default function App() {
                 setLogModal={setLogModal} setLogWeightModal={setLogWeightModal} 
                 setEditModal={setEditModal} handleDeleteLog={handleDeleteLog} 
                 handleStatsRangeChange={handleStatsRangeChange} statsRange={statsRange} 
-                isDark={isDark} 
+                isDark={isDark} recommendations={recommendations}
               />
             )}
             {view === 'track' && (
@@ -538,6 +519,11 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AchievementCelebration 
+        achievement={pendingAchievements[0] || null} 
+        onClose={() => setPendingAchievements(prev => prev.slice(1))}
+      />
 
       {renderToast()}
     </div>

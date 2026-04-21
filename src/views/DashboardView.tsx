@@ -3,9 +3,9 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, ReferenceLine
 } from 'recharts';
-import { Plus, Target, Trophy, Flame, Search, Filter, Pencil, Trash2, Clock, Activity, X, Award, Star, Medal } from 'lucide-react';
+import { Plus, Target, Trophy, Flame, Search, Filter, Pencil, Trash2, Clock, Activity, X, Award, Star, Medal, CheckCircle2, Sparkles, Dumbbell, Zap, Wind, ActivitySquare, StretchHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, Button } from '../ui';
-import { type UserProfile, type ActivityLog, type DailyStat, type WeeklyGoal, type Achievement, type WeightLog } from '../api';
+import { type UserProfile, type ActivityLog, type DailyStat, type WeeklyGoal, type Achievement, type WeightLog, type Exercise } from '../api';
 import { motion } from 'motion/react';
 import { calculateBMI, getBMICategory, cn } from '../utils';
 
@@ -24,12 +24,13 @@ interface DashboardViewProps {
   handleStatsRangeChange: (range: 'week' | 'month') => void;
   statsRange: 'week' | 'month';
   isDark: boolean;
+  recommendations: Exercise[];
 }
 
 export const DashboardView = ({
   user, stats, logs, weightLogs, goal, achievements, setView,
   setLogModal, setLogWeightModal, setEditModal, handleDeleteLog,
-  handleStatsRangeChange, statsRange, isDark
+  handleStatsRangeChange, statsRange, isDark, recommendations
 }: DashboardViewProps) => {
   const [logsPage, setLogsPage] = useState(1);
   const [logsPerPage, setLogsPerPage] = useState(5);
@@ -37,6 +38,14 @@ export const DashboardView = ({
   const [filterEndDate, setFilterEndDate] = useState('');
   const [logSearchQuery, setLogSearchQuery] = useState('');
   const [isMounted, setIsMounted] = useState(false);
+  const carouselRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (carouselRef.current) {
+      const scrollAmount = direction === 'left' ? -320 : 320;
+      carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -69,6 +78,20 @@ export const DashboardView = ({
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
   };
+
+  const today = new Date();
+  const last7Days = Array.from({length: 7}, (_, i) => {
+    const d = new Date();
+    d.setDate(today.getDate() - 6 + i);
+    return d.toISOString().split('T')[0];
+  });
+
+  const dayChecklist = last7Days.map(d => {
+    const dayLogs = logs.filter(l => l.date === d);
+    const totalMin = dayLogs.reduce((sum, l) => sum + l.duration, 0);
+    const dayName = new Date(d).toLocaleDateString('en-US', { weekday: 'short' });
+    return { date: d, dayName, totalMin };
+  });
 
   return (
     <motion.div 
@@ -113,39 +136,140 @@ export const DashboardView = ({
               </Button>
             </div>
           </div>
-          <div className="mt-8 relative">
-            <div className="flex justify-between items-end mb-2">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Weekly Goal Progress</p>
-                <h4 className="text-lg font-black">
-                  {goal?.current_weekly_total || 0} <span className="text-sm font-normal opacity-70">/ {user.weekly_goal} min</span>
-                </h4>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-bold mb-1">
-                  {Math.round(((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%
-                </p>
-                <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight">
-                  {((goal?.current_weekly_total || 0) / user.weekly_goal) >= 1 ? "Goal Smashed! 🎉" : 
-                   ((goal?.current_weekly_total || 0) / user.weekly_goal) >= 0.75 ? "Almost there, finish strong! 💪" :
-                   ((goal?.current_weekly_total || 0) / user.weekly_goal) >= 0.5 ? "Halfway point! Keep it up! ✨" :
-                   ((goal?.current_weekly_total || 0) / user.weekly_goal) > 0 ? "Great start! Every minute counts. 🏃" : "Ready for your first session? ⚡"}
-                </p>
-              </div>
+        </Card>
+      </motion.div>
+
+      {/* Weekly Progress Tracker */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-emerald-100 dark:border-emerald-900/30">
+          <h3 className="font-bold flex items-center gap-2 mb-6"><Target className="text-emerald-500" /> Weekly Progress Tracker</h3>
+          
+          <div className="flex flex-col md:flex-row gap-8 items-center">
+            {/* 7-Day Checklist */}
+            <div className="flex-1 w-full flex justify-between items-center bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              {dayChecklist.map((d, i) => (
+                <div key={d.date} className="flex flex-col items-center gap-2">
+                  <div 
+                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                      d.totalMin > 0 
+                        ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                        : d.date === today.toISOString().split('T')[0]
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500'
+                          : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500'
+                    }`}
+                  >
+                    {d.totalMin > 0 ? <CheckCircle2 size={18} /> : d.dayName.charAt(0)}
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-medium opacity-70">{d.dayName}</span>
+                </div>
+              ))}
             </div>
-            <div className="w-full bg-black/20 rounded-full h-4 overflow-hidden p-1 shadow-inner">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, ((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%` }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-                className="bg-gradient-to-r from-emerald-300 to-white h-full rounded-full relative"
-              >
-                <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]" />
-              </motion.div>
+
+            {/* Milestone Progress Bar */}
+            <div className="flex-1 w-full relative">
+              <div className="flex justify-between items-end mb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Weekly Goal</p>
+                  <h4 className="text-xl font-black">
+                    {goal?.current_weekly_total || 0} <span className="text-sm font-normal opacity-70">/ {user.weekly_goal} min</span>
+                  </h4>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold mb-1 text-emerald-600 dark:text-emerald-400">
+                    {Math.round(((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%
+                  </p>
+                  <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight">
+                    {((goal?.current_weekly_total || 0) / user.weekly_goal) >= 1 ? "Goal Smashed! 🎉" : 
+                     ((goal?.current_weekly_total || 0) / user.weekly_goal) >= 0.75 ? "Almost there, finish strong! 💪" :
+                     ((goal?.current_weekly_total || 0) / user.weekly_goal) >= 0.5 ? "Halfway point! Keep it up! ✨" :
+                     ((goal?.current_weekly_total || 0) / user.weekly_goal) > 0 ? "Great start! Every minute counts. 🏃" : "Ready for your first session? ⚡"}
+                  </p>
+                </div>
+              </div>
+              <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-4 overflow-hidden p-1 shadow-inner">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, ((goal?.current_weekly_total || 0) / user.weekly_goal) * 100)}%` }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full rounded-full relative"
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[shimmer_2s_linear_infinite]" />
+                </motion.div>
+              </div>
             </div>
           </div>
         </Card>
       </motion.div>
+
+      {/* Recommended for You Carousel */}
+      {recommendations && recommendations.length > 0 && (
+        <motion.div variants={itemVariants} className="relative">
+          <div className="flex items-center justify-between mb-4 mt-2 px-1">
+            <h3 className="font-bold flex items-center gap-2"><Sparkles className="text-amber-500" /> Recommended for You</h3>
+            <div className="hidden sm:flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-none transition-transform active:scale-95" onClick={() => scrollCarousel('left')}>
+                <ChevronLeft size={16} />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-none transition-transform active:scale-95" onClick={() => scrollCarousel('right')}>
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="relative group/carousel">
+            {/* Fade edge indicators for mobile */}
+            <div className="absolute left-0 top-0 bottom-6 w-6 bg-gradient-to-r from-zinc-50 dark:from-zinc-950 to-transparent z-10 pointer-events-none md:hidden" />
+            <div className="absolute right-0 top-0 bottom-6 w-6 bg-gradient-to-l from-zinc-50 dark:from-zinc-950 to-transparent z-10 pointer-events-none md:hidden" />
+
+            <div 
+              ref={carouselRef}
+              className="flex overflow-x-auto pb-6 gap-4 snap-x snap-mandatory hide-scrollbar -mx-2 px-2 sm:mx-0 sm:px-0 scroll-smooth"
+            >
+            {recommendations.slice(0, 6).map((rec, idx) => {
+              const bgGradient = rec.category === 'Cardio' ? 'from-blue-500 to-cyan-400' :
+                                rec.category === 'Strength' ? 'from-rose-500 to-orange-400' :
+                                rec.category === 'Flexibility' ? 'from-violet-500 to-purple-400' :
+                                rec.category === 'HIIT' ? 'from-amber-500 to-yellow-400' :
+                                'from-emerald-500 to-teal-400';
+              
+              const CategoryIcon = rec.category === 'Cardio' ? ActivitySquare :
+                                   rec.category === 'Strength' ? Dumbbell :
+                                   rec.category === 'Flexibility' ? StretchHorizontal :
+                                   rec.category === 'HIIT' ? Zap : Wind;
+
+              return (
+                <motion.div 
+                  key={rec.id}
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  className={`min-w-[240px] md:min-w-[280px] snap-center shrink-0 rounded-3xl bg-gradient-to-br ${bgGradient} text-white p-6 shadow-xl shadow-black/5 dark:shadow-black/20 relative overflow-hidden group cursor-pointer border border-white/10`}
+                  onClick={() => setLogModal({ exercise: rec.name, open: true })}
+                >
+                  <div className="absolute -top-4 -right-4 p-4 opacity-20 group-hover:opacity-30 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500 pointer-events-none">
+                    <CategoryIcon size={100} strokeWidth={1.5} />
+                  </div>
+                  <div className="relative z-10 h-full flex flex-col justify-between">
+                    <div className="flex justify-between items-start mb-8">
+                      <span className="text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 bg-white/20 rounded-full backdrop-blur-md shadow-sm">
+                        {rec.difficulty}
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-md shadow-sm border-none" onClick={(e) => { e.stopPropagation(); setLogModal({ exercise: rec.name, open: true }); }}>
+                        <Plus size={16} strokeWidth={3} />
+                      </Button>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-black mb-1 leading-tight tracking-tight drop-shadow-sm line-clamp-2">{rec.name}</h4>
+                      <p className="text-sm font-semibold opacity-90 drop-shadow-sm flex items-center gap-1.5">
+                        <CategoryIcon size={14} /> {rec.category}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Recharts Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
